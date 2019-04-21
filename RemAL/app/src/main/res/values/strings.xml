@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">RemAL</string>
+    <string name="edit_layout">Edit Layout</string>
+    <string name="title_activity_edit_devices"/>
+    <string name="add_device">Add Device</string>
+    <string name="edit_devices">Manage Devices</string>
+    <string name="title_activity_device_options"/>
+    <string name="enter_device_name">Enter device name</string>
+</resources>
