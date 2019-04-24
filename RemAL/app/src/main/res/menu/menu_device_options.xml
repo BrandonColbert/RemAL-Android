@@ -3,4 +3,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="exn.database.remal.DeviceOptions">
 
+    <item
+        android:id="@+id/device_reconnect"
+        android:icon="@drawable/ic_baseline_sync_24px"
+        android:title="@string/reconnect"
+        app:showAsAction="ifRoom">
+    </item>
+
+    <item
+        android:id="@+id/device_disconnect"
+        android:icon="@drawable/ic_baseline_clear_24px"
+        android:title="@string/disconnect"
+        app:showAsAction="ifRoom">
+    </item>
 </menu>

@@ -1,37 +1,73 @@
 package exn.database.remal.core;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.devices.RemoteMultiDevice;
 import exn.database.remal.events.DeviceCreatedEvent;
 import exn.database.remal.events.DeviceDestroyedEvent;
 import exn.database.remal.events.DeviceRenamedEvent;
-import exn.database.remal.macros.IRemoteMacro;
-import exn.database.remal.macros.ShellMacro;
+import exn.database.remal.requests.ActionValidCallback;
+import exn.database.remal.requests.AppLaunchRequest;
+import exn.database.remal.requests.IRemoteRequest;
+import exn.database.remal.requests.ShellRequest;
 
 public final class RemAL {
+    public static final String PACKAGE = "exn.database.remal",
+                                PATH_DEVICES = "devices",
+                                PATH_REQUESTS = "requests";
+
     /** List of existing devices */
     private static final HashMap<String, IRemoteDevice> devices = new HashMap<>();
-    private static final List<IRemoteMacro> macros = new ArrayList<>();
+    private static final List<IRemoteRequest> requests = new ArrayList<>();
     private static final List<IRemalEventListener> listeners = new ArrayList<>();
+    private static Activity activity;
+    private static SharedPreferences preferences;
 
     private RemAL() {}
 
+    public static void setMainActivity(Activity activity) {
+        RemAL.activity = activity;
+    }
+
+    public static void displayText(String text) {
+        activity.runOnUiThread(() -> Toast.makeText(activity, text, Toast.LENGTH_SHORT).show());
+    }
+
     /**
-     * @return A newly created macro
+     * @return A newly created app request
      */
-    public static IRemoteMacro createMacro() {
-        IRemoteMacro macro = new ShellMacro(null);
+    public static IRemoteRequest createAppRequest(IRemoteDevice device) {
+        IRemoteRequest request = new AppLaunchRequest(device);
+        requests.add(request);
 
-        macros.add(macro);
+        return request;
+    }
 
-        return macro;
+    /**
+     * @return A newly created shell request
+     */
+    public static IRemoteRequest createShellRequest(IRemoteDevice device) {
+        IRemoteRequest request = new ShellRequest(device);
+        requests.add(request);
+
+        return request;
     }
 
     public static IRemoteDevice[] getDevices() {
@@ -44,22 +80,8 @@ public final class RemAL {
     /**
      * Returns a list of created macros
      */
-    public List<IRemoteMacro> getMacros() {
-        return macros;
-    }
-
-    /**
-     * Loads saved macros
-     */
-    public static void loadMacros() {
-        //TODO: Implement
-    }
-
-    /**
-     * Loads and connects to the saved devices
-     */
-    public static void loadAndConnectDevices() {
-        //TODO: Implement
+    public List<IRemoteRequest> getRequests() {
+        return requests;
     }
 
     /**
@@ -81,15 +103,16 @@ public final class RemAL {
     }
 
     public static boolean renameDevice(String oldName, String newName) {
-        IRemoteDevice device = devices.remove(oldName);
+        if(!newName.isEmpty() && !devices.containsKey(newName)) {
+            IRemoteDevice device = devices.remove(oldName);
 
-        if(device != null) {
-            device.setName(newName);
-            devices.put(newName, device);
+            if(device != null) {
+                device.setName(newName);
+                devices.put(newName, device);
+                post(new DeviceRenamedEvent(device, oldName));
 
-            post(new DeviceRenamedEvent(device, oldName));
-
-            return true;
+                return true;
+            }
         }
 
         return false;
@@ -120,6 +143,8 @@ public final class RemAL {
         return null;
     }
 
+    //EVENTS
+
     /**
      * Registers an object to receive RemAL events
      * @param listener Object to receive events
@@ -143,5 +168,69 @@ public final class RemAL {
     public static void post(RemalEvent event) {
         for(IRemalEventListener listener : listeners)
             listener.onRemalEvent(event);
+    }
+
+    //SAVING/LOADING
+
+    private static void loadPreferences() {
+        if(activity != null)
+            preferences = activity.getSharedPreferences(PACKAGE, Context.MODE_PRIVATE);
+    }
+
+    public static void saveValue(String name, String value) {
+        loadPreferences();
+        preferences.edit().putString(name, value).apply();
+    }
+
+    public static String loadValue(String name, String defaultString) {
+        loadPreferences();
+        return preferences.getString(name, defaultString);
+    }
+
+    public static void removeSave(String name) {
+        loadPreferences();
+        preferences.edit().remove(name).apply();
+    }
+
+    public static String loadValue(String name) {
+        return loadValue(name, "");
+    }
+
+    /**
+     * Loads saved devices and requests
+     */
+    public static void loadSettings() {
+        loadPreferences();
+
+        //preferences.edit().clear().apply();
+        /*
+        System.out.println("PRINTING PREFS");
+        for(Map.Entry<String, ?> entry : preferences.getAll().entrySet())
+            System.out.println("Prefs: " + entry.getValue().toString());
+        System.out.println("DONE PRINTING PREFS");
+        */
+
+        try {
+            JSONArray savedDevices = new JSONArray(loadValue(PATH_DEVICES, "[]"));
+
+            for(int i = 0; i < savedDevices.length(); i++) {
+                String deviceName = savedDevices.getString(i);
+
+                IRemoteDevice device = new RemoteMultiDevice();
+                device.load(loadValue(PATH_DEVICES + "." + deviceName, "{}"));
+
+                devices.put(deviceName, device);
+            }
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Loads and connects to the saved devices
+     */
+    public static void connectDevices() {
+        for(Map.Entry<String, IRemoteDevice> entry : devices.entrySet())
+            entry.getValue().connect(valid -> {});
     }
 }

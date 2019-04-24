@@ -11,26 +11,60 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 
-public class AppLaunch extends AppCompatActivity {
+import org.json.JSONArray;
+import org.json.JSONException;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import exn.database.remal.core.DeviceEvent;
+import exn.database.remal.core.IRemalEventListener;
+import exn.database.remal.core.RemAL;
+import exn.database.remal.core.RemalEvent;
+import exn.database.remal.devices.IRemoteDevice;
+import exn.database.remal.events.DeviceConfigChangedEvent;
+import exn.database.remal.events.DeviceCreatedEvent;
+import exn.database.remal.events.DeviceDestroyedEvent;
+import exn.database.remal.events.DeviceRenamedEvent;
+
+public class AppLaunch extends AppCompatActivity implements IRemalEventListener {
     private boolean isFullscreen;
     private View appTable;
     private Toolbar toolbar;
+    private boolean isEditing;
+    private int columns;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_app_launch);
 
+        RemAL.setMainActivity(this);
+        RemAL.loadSettings();
+        RemAL.connectDevices();
+
         appTable = findViewById(R.id.app_table);
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        toggleFullscreen(true);
+        toggleFullscreen(false);
 
         appTable.setOnClickListener(view -> {
             if(isFullscreen)
                 toggleFullscreen(false);
         });
+
+        RemAL.register(this);
+
+        //TODO: Load from save
+        columns = 5;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        RemAL.unregister(this);
     }
 
     private void toggleFullscreen(boolean value) {
@@ -78,9 +112,90 @@ public class AppLaunch extends AppCompatActivity {
                 startActivity(new Intent(this, EditDevices.class));
                 return true;
             case R.id.edit_app_layout:
+                toggleEditMode();
                 return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void toggleEditMode() {
+        isEditing = !isEditing;
+
+
+    }
+
+    public void onRemalEvent(RemalEvent event) {
+        try {
+            if(event instanceof DeviceCreatedEvent) {
+                DeviceCreatedEvent e = (DeviceCreatedEvent)event;
+                String name = e.device.getName();
+
+                JSONArray savedDevices = new JSONArray(RemAL.loadValue(RemAL.PATH_DEVICES, "[]"));
+                savedDevices.put(name);
+
+                RemAL.saveValue(RemAL.PATH_DEVICES, savedDevices.toString());
+                RemAL.saveValue(RemAL.PATH_DEVICES + "." + name, e.device.save());
+            } else if(event instanceof DeviceRenamedEvent) {
+                DeviceRenamedEvent e = (DeviceRenamedEvent)event;
+
+                JSONArray savedDevices = new JSONArray(RemAL.loadValue(RemAL.PATH_DEVICES, "[]"));
+
+                List<String> savedDevicesList = new ArrayList<>();
+
+                for(int i = 0; i < savedDevices.length(); i++) {
+                    String s = savedDevices.getString(i);
+
+                    if(!s.equals(e.oldName))
+                        savedDevicesList.add(s);
+                }
+
+                savedDevicesList.add(e.device.getName());
+
+                savedDevices = new JSONArray();
+
+                for(String s : savedDevicesList)
+                    savedDevices.put(s);
+
+
+                RemAL.saveValue(RemAL.PATH_DEVICES, savedDevices.toString());
+                RemAL.removeSave(RemAL.PATH_DEVICES + "." + e.oldName);
+                RemAL.saveValue(RemAL.PATH_DEVICES + "." + e.device.getName(), e.device.save());
+            } else if(event instanceof DeviceDestroyedEvent) {
+                DeviceDestroyedEvent e = (DeviceDestroyedEvent)event;
+
+                JSONArray savedDevices = new JSONArray(RemAL.loadValue(RemAL.PATH_DEVICES, "[]"));
+
+                List<String> savedDevicesList = new ArrayList<>();
+
+                for(int i = 0; i < savedDevices.length(); i++) {
+                    String s = savedDevices.getString(i);
+
+                    if(!s.equals(e.device.getName()))
+                        savedDevicesList.add(s);
+                }
+
+                savedDevices = new JSONArray();
+
+                for(String s : savedDevicesList)
+                    savedDevices.put(s);
+
+
+                RemAL.saveValue(RemAL.PATH_DEVICES, savedDevices.toString());
+                RemAL.removeSave(RemAL.PATH_DEVICES + "." + e.device.getName());
+            } else if(event instanceof DeviceConfigChangedEvent) {
+                DeviceEvent e = (DeviceEvent)event;
+
+                //Get actual device to prevent saving subdevice specifically
+                IRemoteDevice device = e.device;
+                String name = device.getName();
+                device = RemAL.getDevice(name);
+
+                if(device != null)
+                    RemAL.saveValue(RemAL.PATH_DEVICES + "." + name, device.save());
+            }
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
     }
 }

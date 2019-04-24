@@ -13,6 +13,8 @@ import android.widget.Button;
 import java.util.HashMap;
 
 import exn.database.remal.core.DeviceEvent;
+import exn.database.remal.devices.MultiDeviceMode;
+import exn.database.remal.devices.RemoteMultiDevice;
 import exn.database.remal.events.DeviceConnectEvent;
 import exn.database.remal.events.DeviceCreatedEvent;
 import exn.database.remal.events.DeviceDestroyedEvent;
@@ -27,6 +29,7 @@ import static android.widget.LinearLayout.LayoutParams;
 
 public class EditDevices extends AppCompatActivity implements IRemalEventListener {
     public static final String DO_EXTRA = "exn.database.remal.devices.DEVICE_OPTIONS_EXTRA";
+    private static final int MAX_DEVICES = 1000;
 
     private ViewGroup devicesLayout;
     private HashMap<String, Button> deviceButtons;
@@ -73,7 +76,7 @@ public class EditDevices extends AppCompatActivity implements IRemalEventListene
             case R.id.add_device:
                 int index = 1;
 
-                while(!RemAL.createDevice("Device " + index) && index < 1000)
+                while(!RemAL.createDevice("Device " + index) && index < MAX_DEVICES)
                     index++;
 
                 IRemoteDevice device = RemAL.getDevice("Device " + index);
@@ -118,8 +121,12 @@ public class EditDevices extends AppCompatActivity implements IRemalEventListene
         StringBuilder sb = new StringBuilder();
 
         sb.append(device.getName());
-        sb.append(": ");
-        sb.append(device.isConnected() ? "Connected" : "Disconnected");
+		sb.append(" - ");
+
+        if((!(device instanceof RemoteMultiDevice) || ((RemoteMultiDevice)device).getCurrentMode() != MultiDeviceMode.NONE) && device.isConnected())
+            sb.append(device.getConnectionDescription());
+        else
+            sb.append("Disconnected");
 
         button.setText(sb.toString());
     }

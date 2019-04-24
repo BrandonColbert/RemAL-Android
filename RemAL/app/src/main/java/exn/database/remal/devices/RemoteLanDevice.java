@@ -13,13 +13,23 @@ import java.util.TimerTask;
 
 public class RemoteLanDevice extends RemoteWiFiDevice {
     public interface LanDeviceCallback {
-        void run(InetAddress[] devices);
+        void run(InetAddress[] addresses);
     }
 
     private static final byte[] DETECT_BYTES = "REMAL_DETECT".getBytes();
 
+    private boolean isSearching;
+
     public RemoteLanDevice(String name) {
         super(name);
+    }
+
+    public RemoteLanDevice() {
+        super();
+    }
+
+    public String getConnectionName() {
+        return "LAN";
     }
 
     /**
@@ -27,7 +37,8 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
      * @param callback Function to be called with the list of devices
      */
     public void findDevices(LanDeviceCallback callback) {
-        final int port = getWiFiPort();
+        final int port = getPort();
+        isSearching = true;
 
         try {
             //Start broadcast search
@@ -62,7 +73,7 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
             Thread findThread = new Thread(() -> {
                 List<InetAddress> devices = new ArrayList<>();
 
-                while(!Thread.currentThread().isInterrupted()) {
+                while(isSearching) {
                     byte[] buffer = new byte[15000];
                     DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
@@ -74,7 +85,6 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
                     }
                 }
 
-                socket.close();
                 callback.run(devices.toArray(new InetAddress[0]));
             });
 
@@ -82,10 +92,12 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
 
             new Timer().schedule(new TimerTask() {
                 public void run() {
-                    findThread.interrupt();
+                    isSearching = false;
+                    socket.close();
                 }
             }, 1000);
         } catch(Exception e) {
+            isSearching = false;
             e.printStackTrace();
         }
     }

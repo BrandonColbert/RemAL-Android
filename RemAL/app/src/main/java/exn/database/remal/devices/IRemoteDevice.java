@@ -1,12 +1,21 @@
 package exn.database.remal.devices;
 
-import exn.database.remal.macros.ActionValidCallback;
+import exn.database.remal.config.IPersistant;
+import exn.database.remal.requests.ActionValidCallback;
 
-public interface IRemoteDevice {
+/**
+ * A device that can be connected to and sent commands
+ */
+public interface IRemoteDevice extends IPersistant {
     /**
      * @return True if this device is connected, false otherwise
      */
     boolean isConnected();
+
+    /**
+     * @return Whether connecting is currently in progress
+     */
+    boolean isConnecting();
 
     /**
      * Disconnect from this device
@@ -20,11 +29,11 @@ public interface IRemoteDevice {
     void connect(ActionValidCallback callback);
 
     /**
-     * Sends a command to this device
-     * @param command Command to send
+     * Sends a request to this device
+     * @param request Request to send
      * @param callback Callback passing true if the command was both received and executed successfully, or false otherwise
      */
-    void sendCommand(String command, ActionValidCallback callback);
+    void sendRequest(String request, ActionValidCallback callback);
 
     /**
      * @return The localized name of this device
@@ -36,4 +45,14 @@ public interface IRemoteDevice {
      * @param name Name for the device
      */
     void setName(String name);
+
+    /**
+     * @return Name for the type of connection used
+     */
+    String getConnectionName();
+
+    /**
+     * @return Description of the connection being used
+     */
+    String getConnectionDescription();
 }

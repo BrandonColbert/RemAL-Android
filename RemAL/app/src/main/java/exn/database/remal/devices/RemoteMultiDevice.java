@@ -1,93 +1,207 @@
 package exn.database.remal.devices;
 
-import exn.database.remal.macros.ActionValidCallback;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import exn.database.remal.core.RemAL;
+import exn.database.remal.requests.ActionValidCallback;
 
 /**
  * Handles connections and command sending to devices
  */
-public class RemoteMultiDevice implements IRemoteDevice {
-    public static final int USB_INDEX = 0, LAN_INDEX = 1, BLUETOOTH_INDEX = 2, WIFI_INDEX = 3, SSH_INDEX = 4;
-
-    /**
-     * The order in which connections will be attempted if multiple exist
-     */
-    private int[] connectionOrder;
-    private IRemoteDevice[] instances;
-    private String name;
-    private int currentConnectionIndex;
+public class RemoteMultiDevice extends RemoteDevice {
+    private HashMap<MultiDeviceMode, SubDevicePack> subdevices = new HashMap<>();
+    private HashMap<Class<? extends IRemoteDevice>, MultiDeviceMode> classmap = new HashMap<>();
+    private MultiDeviceMode currentMode;
 
     public RemoteMultiDevice(String name) {
-        this.name = name;
-        currentConnectionIndex = -1;
+        super(name);
+        currentMode = MultiDeviceMode.NONE;
 
-        connectionOrder = new int[] {
-                USB_INDEX,
-                LAN_INDEX,
-                BLUETOOTH_INDEX,
-                WIFI_INDEX,
-                SSH_INDEX
-        };
-
-        instances = new IRemoteDevice[] {
-                new RemoteUSBDevice(name),
-                new RemoteLanDevice(name),
-                new RemoteBluetoothDevice(name),
-                new RemoteWiFiDevice(name),
-                new RemoteSSHDevice(name)
-        };
+        register(MultiDeviceMode.USB, RemoteUSBDevice.class, new SubDevicePack(new RemoteUSBDevice(name), 0));
+        register(MultiDeviceMode.LAN, RemoteLanDevice.class, new SubDevicePack(new RemoteLanDevice(name), 1));
+        register(MultiDeviceMode.BLUETOOTH, RemoteBluetoothDevice.class, new SubDevicePack(new RemoteBluetoothDevice(name), 2));
+        register(MultiDeviceMode.WIFI, RemoteWiFiDevice.class, new SubDevicePack(new RemoteWiFiDevice(name), 3));
+        register(MultiDeviceMode.SSH, RemoteSSHDevice.class, new SubDevicePack(new RemoteSSHDevice(name), 4));
     }
 
-    public <T extends IRemoteDevice> T getInstance(int connectionIndex) {
-        return (T)instances[connectionIndex];
+    public RemoteMultiDevice() {
+        super();
+        currentMode = MultiDeviceMode.NONE;
+
+        register(MultiDeviceMode.USB, RemoteUSBDevice.class, new SubDevicePack(new RemoteUSBDevice()));
+        register(MultiDeviceMode.LAN, RemoteLanDevice.class, new SubDevicePack(new RemoteLanDevice()));
+        register(MultiDeviceMode.BLUETOOTH, RemoteBluetoothDevice.class, new SubDevicePack(new RemoteBluetoothDevice()));
+        register(MultiDeviceMode.WIFI, RemoteWiFiDevice.class, new SubDevicePack(new RemoteWiFiDevice()));
+        register(MultiDeviceMode.SSH, RemoteSSHDevice.class, new SubDevicePack(new RemoteSSHDevice()));
     }
 
-    public int[] getConnectionOrder() {
-        return connectionOrder;
+    private void register(MultiDeviceMode mode, Class<? extends IRemoteDevice> deviceClass, SubDevicePack pack) {
+        subdevices.put(mode, pack);
+        classmap.put(deviceClass, mode);
     }
 
-    public void setConnectionOrder(int[] order) {
-        connectionOrder = order;
+    /**
+     * @param mode Mode tied to the subdevice
+     * @return The subdevice for the mode
+     */
+    public SubDevicePack getPack(MultiDeviceMode mode) {
+        if(subdevices.containsKey(mode))
+            return subdevices.get(mode);
+
+        return null;
+    }
+
+    /**
+     * @param type Class for the subdevice
+     * @param <T> Remote device type
+     * @return The subdevice tied to the class
+     */
+    public <T extends IRemoteDevice> T getSubDevice(Class<T> type) {
+        if(classmap.containsKey(type))
+            return (T)getPack(classmap.get(type)).getDevice();
+
+        return null;
     }
 
     public boolean isConnected() {
-        return currentConnectionIndex > -1 && instances[currentConnectionIndex].isConnected();
+        return currentMode != MultiDeviceMode.NONE && subdevices.get(currentMode).getDevice().isConnected();
     }
 
     public void disconnect() {
-        if(currentConnectionIndex > -1)
-            instances[currentConnectionIndex].disconnect();
+        if(currentMode != MultiDeviceMode.NONE)
+            subdevices.get(currentMode).getDevice().disconnect();
     }
 
-    public void sendCommand(String command, ActionValidCallback callback) {
-        if(currentConnectionIndex > -1)
-            instances[currentConnectionIndex].sendCommand(command, callback);
+    public void sendRequest(String request, ActionValidCallback callback) {
+        if(currentMode != MultiDeviceMode.NONE)
+            subdevices.get(currentMode).getDevice().sendRequest(request, callback);
         else
             callback.run(false);
     }
 
+    private volatile boolean connectionResult;
+    private volatile boolean connectionWaiting;
+
     public void connect(ActionValidCallback callback) {
-        //TODO: Implement
-        callback.run(false);
+        isConnecting = true;
 
-        /*
+        List<SubDevicePack> devices = new ArrayList<>();
 
-        for(int connectionIndex : connectionOrder) {
-            if(instances[connectionIndex].connect()) {
-                currentConnectionIndex = connectionIndex;
+        for(Map.Entry<MultiDeviceMode, SubDevicePack> entry : subdevices.entrySet())
+            devices.add(entry.getValue());
+
+        Collections.sort(devices, (lhs, rhs) -> Integer.compare(lhs.getOrder(), rhs.getOrder()));
+
+        connectionResult = false;
+
+        new Thread(() -> {
+            for(int i = 0; i < devices.size(); i++) {
+                SubDevicePack pack = devices.get(i);
+
+                if(pack.isEnabled()) {
+                    IRemoteDevice device = pack.getDevice();
+
+                    RemAL.displayText("Trying '" + name + "' through " + device.getConnectionName() + "...");
+
+                    connectionWaiting = true;
+
+                    try {
+                        device.connect(valid -> {
+                            connectionResult = valid;
+                            connectionWaiting = false;
+                        });
+                    } catch(Exception e) {
+                        connectionWaiting = false;
+                    }
+
+                    while(connectionWaiting);
+
+                    if(connectionResult)
+                        break;
+                }
             }
+
+            isConnecting = false;
+            callback.run(connectionResult);
+        }).start();
+    }
+
+    @Override
+    public void setName(String name) {
+        super.setName(name);
+
+        for(Map.Entry<MultiDeviceMode, SubDevicePack> pair : subdevices.entrySet())
+            pair.getValue().getDevice().setName(name);
+    }
+
+    public String getConnectionName() {
+        return currentMode != MultiDeviceMode.NONE ? subdevices.get(currentMode).getDevice().getConnectionName() : "Generic";
+    }
+
+    public String getConnectionDescription() {
+        return currentMode != MultiDeviceMode.NONE ? subdevices.get(currentMode).getDevice().getConnectionDescription() : super.getConnectionDescription();
+    }
+
+    /**
+     * @return The mode for the subdevice currently being used
+     */
+    public MultiDeviceMode getCurrentMode() {
+        return currentMode;
+    }
+
+    @Override
+    public String save() {
+        JSONObject data = new JSONObject();
+
+        try {
+            data.put("name", name);
+
+            for(Map.Entry<MultiDeviceMode, SubDevicePack> entry : subdevices.entrySet()) {
+                SubDevicePack pack = entry.getValue();
+                IRemoteDevice device = pack.getDevice();
+                String key = entry.getKey().name();
+
+                data.put("subdevice." + key, device.save());
+                data.put("subdevice." + key + ".order", pack.getOrder());
+                data.put("subdevice." + key + ".enabled", pack.isEnabled());
+            }
+        } catch(JSONException e) {
+            e.printStackTrace();
         }
 
-        */
+        return data.toString();
     }
 
-    public String getName() {
-        return name;
-    }
+    @Override
+    public void load(String data) {
+        try {
+            JSONObject obj = new JSONObject(data);
 
-    public void setName(String name) {
-        this.name = name;
+            name = obj.getString("name");
 
-        for(IRemoteDevice device : instances)
-            device.setName(name);
+            Iterator<String> keys = obj.keys();
+
+            while(keys.hasNext()) {
+                String key = keys.next();
+
+                if(!key.startsWith("subdevice.") || (key.endsWith(".order") || key.endsWith(".enabled")))
+                    continue;
+
+                SubDevicePack pack = subdevices.get(MultiDeviceMode.valueOf(key.substring("subdevice.".length())));
+                pack.getDevice().load(obj.getString(key));
+                pack.setOrder(obj.getInt(key + ".order"));
+                pack.setEnabled(obj.getBoolean(key + ".enabled"));
+            }
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
     }
 }

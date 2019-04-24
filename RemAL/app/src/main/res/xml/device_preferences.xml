@@ -1,49 +1,98 @@
 <PreferenceScreen
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorPrimary">
 
     <EditTextPreference
+        android:order="-1"
         android:key="device_name"
-        android:title="Device Name"
-        android:summary="Name that the computer will be recognized with"/>
+        android:title="Remote Device Name"
+        android:dialogLayout="@layout/layout_edit_text_single"/>
 
     <PreferenceCategory
-        android:title="USB Settings">
-    </PreferenceCategory>
+        android:key="category_usb"
+        android:title="USB Settings"/>
+
+    <SwitchPreference
+        android:key="usb_enabled"
+        android:title="Enabled"/>
 
     <PreferenceCategory
-        android:title="LAN Settings">
+        android:key="category_lan"
+        android:title="LAN Settings"/>
 
-        <EditTextPreference
-            android:key="wifi_port"
-            android:title="Port"
-            android:summary="0000"
-            android:inputType="number"/>
+    <SwitchPreference
+        android:key="lan_enabled"
+        android:title="Enabled"/>
 
-        <EditTextPreference
-            android:key="wifi_address"
-            android:title="Address"
-            android:summary="192.0.0.0"
-            android:inputType="number"/>
+    <EditTextPreference
+        android:key="lan_port"
+        android:title="Port"
+        android:dialogLayout="@layout/layout_edit_text_port"/>
 
-        <ListPreference
-            android:key="wifi_options"
-            android:title="Address Options"/>
-    </PreferenceCategory>
+    <EditTextPreference
+        android:key="lan_address"
+        android:title="IP Address"
+        android:dialogLayout="@layout/layout_edit_text_address"/>
 
-    <PreferenceCategory
-        android:title="Bluetooth Settings">
-    </PreferenceCategory>
+    <ListPreference
+        android:key="lan_device_list"
+        android:title="Select Address"/>
 
     <PreferenceCategory
-        android:title="WiFi Settings">
-    </PreferenceCategory>
+        android:key="category_bt"
+        android:title="Bluetooth Settings"/>
+
+    <SwitchPreference
+        android:key="bt_enabled"
+        android:title="Enabled"/>
+
+    <Preference
+        android:key="bt_name"
+        android:title="Connected Device"/>
+
+    <ListPreference
+        android:key="bt_device_list"
+        android:title="Select Bluetooth Device"/>
 
     <PreferenceCategory
-        android:title="SSH Settings">
-    </PreferenceCategory>
+        android:key="category_wifi"
+        android:title="WiFi Settings"/>
 
+    <SwitchPreference
+        android:key="wifi_enabled"
+        android:title="Enabled"/>
+
+    <EditTextPreference
+        android:key="wifi_port"
+        android:title="Port"
+        android:dialogLayout="@layout/layout_edit_text_port"/>
+
+    <EditTextPreference
+        android:key="wifi_address"
+        android:title="IP Address"
+        android:dialogLayout="@layout/layout_edit_text_address"/>
+
+    <PreferenceCategory
+        android:key="category_ssh"
+        android:title="SSH Settings"/>
+
+    <SwitchPreference
+        android:key="ssh_enabled"
+        android:title="Enabled"/>
+
+    <EditTextPreference
+        android:key="shh_user"
+        android:title="Username"
+        android:dialogLayout="@layout/layout_edit_text_single"/>
+
+    <EditTextPreference
+        android:key="shh_pass"
+        android:title="Password"
+        android:dialogLayout="@layout/layout_edit_text_password"/>
+
+    <EditTextPreference
+        android:key="ssh_address"
+        android:title="Address"/>
 </PreferenceScreen>

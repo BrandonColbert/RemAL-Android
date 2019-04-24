@@ -1,12 +1,17 @@
 package exn.database.remal.devices;
 
-import exn.database.remal.macros.ActionValidCallback;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-public class RemoteBluetoothDevice implements IRemoteDevice {
-    private String name;
+import exn.database.remal.requests.ActionValidCallback;
 
+public class RemoteBluetoothDevice extends RemoteDevice {
     public RemoteBluetoothDevice(String name) {
-        this.name = name;
+        super(name);
+    }
+
+    public RemoteBluetoothDevice() {
+        super();
     }
 
     @Override
@@ -25,15 +30,35 @@ public class RemoteBluetoothDevice implements IRemoteDevice {
     }
 
     @Override
-    public void sendCommand(String command, ActionValidCallback callback) {
+    public void sendRequest(String request, ActionValidCallback callback) {
         callback.run(false);
     }
 
-    public String getName() {
-        return name;
+    public String getConnectionName() {
+        return "Bluetooth";
     }
 
-    public void setName(String name) {
-        this.name = name;
+    @Override
+    public String save() {
+        JSONObject data = new JSONObject();
+
+        try {
+            data.put("name", name);
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
+
+        return data.toString();
+    }
+
+    @Override
+    public void load(String data) {
+        try {
+            JSONObject obj = new JSONObject(data);
+
+            name = obj.getString("name");
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
     }
 }

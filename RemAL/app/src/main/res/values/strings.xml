@@ -6,4 +6,6 @@
     <string name="edit_devices">Manage Devices</string>
     <string name="title_activity_device_options"/>
     <string name="enter_device_name">Enter device name</string>
+    <string name="reconnect">Reconnect</string>
+    <string name="disconnect">Disconnect</string>
 </resources>
