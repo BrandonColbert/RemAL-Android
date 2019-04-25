@@ -1,12 +1,12 @@
 package exn.database.remal.requests;
 
-import exn.database.remal.config.IPersistant;
+import exn.database.remal.config.IPersistent;
 import exn.database.remal.devices.IRemoteDevice;
 
 /**
  * A request that can be sent to a device
  */
-public interface IRemoteRequest extends IPersistant {
+public interface IRemoteRequest extends IPersistent {
     /**
      * Sets the device to send requests to
      * @param device The device

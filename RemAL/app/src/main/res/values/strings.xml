@@ -8,4 +8,6 @@
     <string name="enter_device_name">Enter device name</string>
     <string name="reconnect">Reconnect</string>
     <string name="disconnect">Disconnect</string>
+    <string name="edit_settings">Edit Settings</string>
+    <string name="title_activity_deck_settings"/>
 </resources>

@@ -2,17 +2,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/edit_settings"
+        android:icon="@drawable/ic_baseline_settings_20px"
+        android:title="@string/edit_settings"
+        app:showAsAction="ifRoom"/>
+
+    <item
         android:id="@+id/edit_devices"
         android:icon="@drawable/ic_baseline_list_24px"
         android:title="@string/edit_devices"
-        app:showAsAction="ifRoom">
-    </item>
+        app:showAsAction="ifRoom"/>
 
     <item
         android:id="@+id/edit_app_layout"
         android:icon="@drawable/ic_baseline_create_24px"
         android:title="@string/edit_layout"
-        app:showAsAction="ifRoom">
-    </item>
+        app:showAsAction="ifRoom"/>
 
 </menu>

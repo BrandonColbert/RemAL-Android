@@ -1,12 +1,12 @@
 package exn.database.remal.devices;
 
-import exn.database.remal.config.IPersistant;
+import exn.database.remal.config.IPersistent;
 import exn.database.remal.requests.ActionValidCallback;
 
 /**
  * A device that can be connected to and sent commands
  */
-public interface IRemoteDevice extends IPersistant {
+public interface IRemoteDevice extends IPersistent {
     /**
      * @return True if this device is connected, false otherwise
      */

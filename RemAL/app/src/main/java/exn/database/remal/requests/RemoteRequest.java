@@ -3,6 +3,7 @@ package exn.database.remal.requests;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import exn.database.remal.core.RemAL;
 import exn.database.remal.devices.IRemoteDevice;
 
 public class RemoteRequest implements IRemoteRequest {
@@ -11,6 +12,11 @@ public class RemoteRequest implements IRemoteRequest {
 
     public RemoteRequest(IRemoteDevice device) {
         target = device;
+    }
+
+    public RemoteRequest() {
+        target = null;
+        request = "";
     }
 
     public void setTargetDevice(IRemoteDevice device) {
@@ -30,26 +36,16 @@ public class RemoteRequest implements IRemoteRequest {
     }
 
     @Override
-    public String save() {
-        JSONObject data = new JSONObject();
+    public JSONObject save(JSONObject data) throws JSONException {
+        data.put("device", getTargetDevice().getName());
+        data.put("request", request);
 
-        try {
-            data.put("request", request);
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
-
-        return data.toString();
+        return data;
     }
 
     @Override
-    public void load(String data) {
-        try {
-            JSONObject obj = new JSONObject(data);
-
-            request = obj.getString("address");
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
+    public void load(JSONObject data) throws JSONException {
+        setTargetDevice(RemAL.getDevice(data.getString("device")));
+        request = data.getString("address");
     }
 }

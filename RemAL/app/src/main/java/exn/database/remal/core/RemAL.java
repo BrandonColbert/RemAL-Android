@@ -1,49 +1,40 @@
 package exn.database.remal.core;
 
 import android.app.Activity;
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.widget.Toast;
 
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 
+import exn.database.remal.config.PersistenceUtils;
 import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.devices.RemoteMultiDevice;
 import exn.database.remal.events.DeviceCreatedEvent;
 import exn.database.remal.events.DeviceDestroyedEvent;
 import exn.database.remal.events.DeviceRenamedEvent;
-import exn.database.remal.requests.ActionValidCallback;
-import exn.database.remal.requests.AppLaunchRequest;
+import exn.database.remal.requests.DeckTile;
 import exn.database.remal.requests.IRemoteRequest;
-import exn.database.remal.requests.ShellRequest;
 
 public final class RemAL {
-    public static final String PACKAGE = "exn.database.remal",
-                                PATH_DEVICES = "devices",
-                                PATH_REQUESTS = "requests";
-
     /** List of existing devices */
     private static final HashMap<String, IRemoteDevice> devices = new HashMap<>();
     private static final List<IRemoteRequest> requests = new ArrayList<>();
     private static final List<IRemalEventListener> listeners = new ArrayList<>();
     private static Activity activity;
-    private static SharedPreferences preferences;
 
     private RemAL() {}
 
     public static void setMainActivity(Activity activity) {
         RemAL.activity = activity;
+    }
+
+    public static Activity getMainActivity() {
+        return activity;
     }
 
     public static void displayText(String text) {
@@ -53,21 +44,21 @@ public final class RemAL {
     /**
      * @return A newly created app request
      */
-    public static IRemoteRequest createAppRequest(IRemoteDevice device) {
-        IRemoteRequest request = new AppLaunchRequest(device);
+    public static DeckTile createTile(IRemoteDevice device, int row, int column) {
+        DeckTile request = new DeckTile(device, row, column);
         requests.add(request);
 
         return request;
     }
 
     /**
-     * @return A newly created shell request
+     * Loads and connects to the saved devices
      */
-    public static IRemoteRequest createShellRequest(IRemoteDevice device) {
-        IRemoteRequest request = new ShellRequest(device);
-        requests.add(request);
-
-        return request;
+    public static void loadAndConnectDevices() {
+        for(IRemoteDevice device : PersistenceUtils.loadDevices()) {
+            devices.put(device.getName(), device);
+            device.connect(valid -> {});
+        }
     }
 
     public static IRemoteDevice[] getDevices() {
@@ -94,6 +85,13 @@ public final class RemAL {
             IRemoteDevice device = new RemoteMultiDevice(name);
             devices.put(name, device);
 
+            try {
+                PersistenceUtils.addToDevicePath(device);
+                PersistenceUtils.saveDevice(device);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
             post(new DeviceCreatedEvent(device));
 
             return true;
@@ -107,8 +105,23 @@ public final class RemAL {
             IRemoteDevice device = devices.remove(oldName);
 
             if(device != null) {
+                try {
+                    PersistenceUtils.removeFromDevicePath(device);
+                    PersistenceUtils.removeDeviceSave(device);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
                 device.setName(newName);
                 devices.put(newName, device);
+
+                try {
+                    PersistenceUtils.addToDevicePath(device);
+                    PersistenceUtils.saveDevice(device);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
                 post(new DeviceRenamedEvent(device, oldName));
 
                 return true;
@@ -127,6 +140,13 @@ public final class RemAL {
 
         if(device != null && device.isConnected())
             device.disconnect();
+
+        try {
+            PersistenceUtils.removeFromDevicePath(device);
+            PersistenceUtils.removeDeviceSave(device);
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
 
         post(new DeviceDestroyedEvent(device));
     }
@@ -168,69 +188,5 @@ public final class RemAL {
     public static void post(RemalEvent event) {
         for(IRemalEventListener listener : listeners)
             listener.onRemalEvent(event);
-    }
-
-    //SAVING/LOADING
-
-    private static void loadPreferences() {
-        if(activity != null)
-            preferences = activity.getSharedPreferences(PACKAGE, Context.MODE_PRIVATE);
-    }
-
-    public static void saveValue(String name, String value) {
-        loadPreferences();
-        preferences.edit().putString(name, value).apply();
-    }
-
-    public static String loadValue(String name, String defaultString) {
-        loadPreferences();
-        return preferences.getString(name, defaultString);
-    }
-
-    public static void removeSave(String name) {
-        loadPreferences();
-        preferences.edit().remove(name).apply();
-    }
-
-    public static String loadValue(String name) {
-        return loadValue(name, "");
-    }
-
-    /**
-     * Loads saved devices and requests
-     */
-    public static void loadSettings() {
-        loadPreferences();
-
-        //preferences.edit().clear().apply();
-        /*
-        System.out.println("PRINTING PREFS");
-        for(Map.Entry<String, ?> entry : preferences.getAll().entrySet())
-            System.out.println("Prefs: " + entry.getValue().toString());
-        System.out.println("DONE PRINTING PREFS");
-        */
-
-        try {
-            JSONArray savedDevices = new JSONArray(loadValue(PATH_DEVICES, "[]"));
-
-            for(int i = 0; i < savedDevices.length(); i++) {
-                String deviceName = savedDevices.getString(i);
-
-                IRemoteDevice device = new RemoteMultiDevice();
-                device.load(loadValue(PATH_DEVICES + "." + deviceName, "{}"));
-
-                devices.put(deviceName, device);
-            }
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Loads and connects to the saved devices
-     */
-    public static void connectDevices() {
-        for(Map.Entry<String, IRemoteDevice> entry : devices.entrySet())
-            entry.getValue().connect(valid -> {});
     }
 }

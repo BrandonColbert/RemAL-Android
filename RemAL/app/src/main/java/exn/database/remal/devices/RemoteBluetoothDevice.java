@@ -37,28 +37,4 @@ public class RemoteBluetoothDevice extends RemoteDevice {
     public String getConnectionName() {
         return "Bluetooth";
     }
-
-    @Override
-    public String save() {
-        JSONObject data = new JSONObject();
-
-        try {
-            data.put("name", name);
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
-
-        return data.toString();
-    }
-
-    @Override
-    public void load(String data) {
-        try {
-            JSONObject obj = new JSONObject(data);
-
-            name = obj.getString("name");
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
-    }
 }

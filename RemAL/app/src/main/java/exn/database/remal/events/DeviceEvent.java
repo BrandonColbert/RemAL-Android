@@ -1,5 +1,6 @@
-package exn.database.remal.core;
+package exn.database.remal.events;
 
+import exn.database.remal.core.RemalEvent;
 import exn.database.remal.devices.IRemoteDevice;
 
 public class DeviceEvent extends RemalEvent {

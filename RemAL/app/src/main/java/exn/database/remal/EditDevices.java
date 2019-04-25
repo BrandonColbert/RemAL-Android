@@ -12,7 +12,7 @@ import android.widget.Button;
 
 import java.util.HashMap;
 
-import exn.database.remal.core.DeviceEvent;
+import exn.database.remal.events.DeviceEvent;
 import exn.database.remal.devices.MultiDeviceMode;
 import exn.database.remal.devices.RemoteMultiDevice;
 import exn.database.remal.events.DeviceConnectEvent;

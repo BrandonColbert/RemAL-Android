@@ -1,5 +1,8 @@
 package exn.database.remal.devices;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public abstract class RemoteDevice implements IRemoteDevice {
     protected String name;
     protected volatile boolean isConnecting;
@@ -32,5 +35,17 @@ public abstract class RemoteDevice implements IRemoteDevice {
     @Override
     public String getConnectionDescription() {
         return getConnectionName();
+    }
+
+    @Override
+    public JSONObject save(JSONObject data) throws JSONException {
+        data.put("name", name);
+
+        return data;
+    }
+
+    @Override
+    public void load(JSONObject data) throws JSONException {
+        name = data.getString("name");
     }
 }

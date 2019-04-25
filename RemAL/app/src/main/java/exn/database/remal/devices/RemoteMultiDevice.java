@@ -17,6 +17,10 @@ import exn.database.remal.requests.ActionValidCallback;
  * Handles connections and command sending to devices
  */
 public class RemoteMultiDevice extends RemoteDevice {
+    private static final String SUBDEVICE_PREFIX = "subdevice.",
+                                SUBDEVICE_ENABLED_POSTFIX = ".enabled",
+                                SUBDEVICE_ORDER_POSTFIX = ".order";
+
     private HashMap<MultiDeviceMode, SubDevicePack> subdevices = new HashMap<>();
     private HashMap<Class<? extends IRemoteDevice>, MultiDeviceMode> classmap = new HashMap<>();
     private MultiDeviceMode currentMode;
@@ -158,50 +162,38 @@ public class RemoteMultiDevice extends RemoteDevice {
     }
 
     @Override
-    public String save() {
-        JSONObject data = new JSONObject();
+    public JSONObject save(JSONObject data) throws JSONException {
+        super.save(data);
 
-        try {
-            data.put("name", name);
+        for(Map.Entry<MultiDeviceMode, SubDevicePack> entry : subdevices.entrySet()) {
+            SubDevicePack pack = entry.getValue();
+            IRemoteDevice device = pack.getDevice();
+            String key = entry.getKey().name();
 
-            for(Map.Entry<MultiDeviceMode, SubDevicePack> entry : subdevices.entrySet()) {
-                SubDevicePack pack = entry.getValue();
-                IRemoteDevice device = pack.getDevice();
-                String key = entry.getKey().name();
-
-                data.put("subdevice." + key, device.save());
-                data.put("subdevice." + key + ".order", pack.getOrder());
-                data.put("subdevice." + key + ".enabled", pack.isEnabled());
-            }
-        } catch(JSONException e) {
-            e.printStackTrace();
+            data.put(SUBDEVICE_PREFIX + key, device.save(new JSONObject()));
+            data.put(SUBDEVICE_PREFIX + key + SUBDEVICE_ORDER_POSTFIX, pack.getOrder());
+            data.put(SUBDEVICE_PREFIX + key + SUBDEVICE_ORDER_POSTFIX, pack.isEnabled());
         }
 
-        return data.toString();
+        return data;
     }
 
     @Override
-    public void load(String data) {
-        try {
-            JSONObject obj = new JSONObject(data);
+    public void load(JSONObject data) throws JSONException {
+        super.load(data);
 
-            name = obj.getString("name");
+        Iterator<String> keys = data.keys();
 
-            Iterator<String> keys = obj.keys();
+        while(keys.hasNext()) {
+            String key = keys.next();
 
-            while(keys.hasNext()) {
-                String key = keys.next();
+            if(!key.startsWith(SUBDEVICE_PREFIX) || (key.endsWith(SUBDEVICE_ORDER_POSTFIX) || key.endsWith(SUBDEVICE_ENABLED_POSTFIX)))
+                continue;
 
-                if(!key.startsWith("subdevice.") || (key.endsWith(".order") || key.endsWith(".enabled")))
-                    continue;
-
-                SubDevicePack pack = subdevices.get(MultiDeviceMode.valueOf(key.substring("subdevice.".length())));
-                pack.getDevice().load(obj.getString(key));
-                pack.setOrder(obj.getInt(key + ".order"));
-                pack.setEnabled(obj.getBoolean(key + ".enabled"));
-            }
-        } catch(JSONException e) {
-            e.printStackTrace();
+            SubDevicePack pack = subdevices.get(MultiDeviceMode.valueOf(key.substring(SUBDEVICE_PREFIX.length())));
+            pack.getDevice().load(new JSONObject(data.getString(key)));
+            pack.setOrder(data.getInt(key + SUBDEVICE_ORDER_POSTFIX));
+            pack.setEnabled(data.getBoolean(key + SUBDEVICE_ENABLED_POSTFIX));
         }
     }
 }

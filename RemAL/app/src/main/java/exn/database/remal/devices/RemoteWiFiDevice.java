@@ -48,31 +48,21 @@ public class RemoteWiFiDevice extends RemoteDevice {
     }
 
     @Override
-    public String save() {
-        JSONObject data = new JSONObject();
+    public JSONObject save(JSONObject data) throws JSONException {
+        super.save(data);
 
-        try {
-            data.put("name", name);
-            data.put("port", port);
-            data.put("address", address);
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
+        data.put("port", port);
+        data.put("address", address);
 
-        return data.toString();
+        return data;
     }
 
     @Override
-    public void load(String data) {
-        try {
-            JSONObject obj = new JSONObject(data);
+    public void load(JSONObject data) throws JSONException {
+        super.load(data);
 
-            name = obj.getString("name");
-            port = obj.getInt("port");
-            address = obj.getString("address");
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
+        port = data.getInt("port");
+        address = data.getString("address");
     }
 
     public boolean isConnected() {

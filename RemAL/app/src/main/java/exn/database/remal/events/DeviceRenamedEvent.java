@@ -1,6 +1,5 @@
 package exn.database.remal.events;
 
-import exn.database.remal.core.DeviceEvent;
 import exn.database.remal.devices.IRemoteDevice;
 
 public class DeviceRenamedEvent extends DeviceEvent {
