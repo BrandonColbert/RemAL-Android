@@ -1,4 +1,4 @@
-package exn.database.remal.deck;
+package exn.database.remal.requests;
 
 import exn.database.remal.config.IPersistent;
 import exn.database.remal.devices.IRemoteDevice;

@@ -1,6 +1,9 @@
 package exn.database.remal.devices;
 
-import exn.database.remal.deck.ActionValidCallback;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import exn.database.remal.requests.ActionValidCallback;
 
 public class RemoteUSBDevice extends RemoteDevice {
     public RemoteUSBDevice(String name) {

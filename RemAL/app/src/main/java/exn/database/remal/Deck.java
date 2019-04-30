@@ -8,35 +8,29 @@ import android.support.v7.widget.Toolbar;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
-import android.widget.LinearLayout.LayoutParams;
-import android.widget.Button;
-import android.widget.TableLayout;
-import android.widget.TableRow;
+
+import org.json.JSONArray;
+import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import exn.database.remal.config.PersistenceUtils;
+import exn.database.remal.events.DeviceEvent;
+import exn.database.remal.core.IRemalEventListener;
 import exn.database.remal.core.RemAL;
-import exn.database.remal.deck.ITile;
+import exn.database.remal.core.RemalEvent;
+import exn.database.remal.devices.IRemoteDevice;
+import exn.database.remal.events.DeviceConfigChangedEvent;
+import exn.database.remal.events.DeviceCreatedEvent;
+import exn.database.remal.events.DeviceDestroyedEvent;
+import exn.database.remal.events.DeviceRenamedEvent;
 
 public class Deck extends AppCompatActivity {
-    private class TileButtonPack {
-        public Button button;
-        public ITile tile;
-
-        public TileButtonPack(ITile tile, Button button) {
-            this.tile = tile;
-            this.button = button;
-        }
-    }
-
-    public static final int MAX_ROWS = 100, MAX_COLUMNS = 10;
-    private List<TileButtonPack> tiles = new ArrayList<>();
-
     private boolean isFullscreen;
-    private TableLayout appTable;
+    private View appTable;
     private Toolbar toolbar;
     private boolean isEditing;
     private int columns;
@@ -46,10 +40,8 @@ public class Deck extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_deck);
 
-        PersistenceUtils.loadPreferences(this);
         RemAL.setMainActivity(this);
         RemAL.loadAndConnectDevices();
-        RemAL.loadTiles();
 
         appTable = findViewById(R.id.app_table);
         toolbar = findViewById(R.id.toolbar);
@@ -62,55 +54,13 @@ public class Deck extends AppCompatActivity {
                 toggleFullscreen(false);
         });
 
-        setColumns(Integer.valueOf(PersistenceUtils.loadValue("columns")));
-
-        for(int i = 0; i < MAX_COLUMNS; i++) {
-            for(int j = 0; j < MAX_ROWS; j++) {
-
-            }
-        }
-
-        for(ITile tile : RemAL.getTiles())
-            createTileButton(tile, 0, 0);
-    }
-
-    public void fillEmpty() {
-
+        //TODO: Load from save
+        columns = 5;
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-    }
-
-    public void setColumns(int columns) {
-        this.columns = columns;
-
-        for(int i = 0; i < appTable.getChildCount(); i++) {
-            TableRow row = (TableRow)appTable.getChildAt(i);
-            row.setWeightSum(columns);
-        }
-    }
-
-    /**
-     * Creates a button for a tile
-     * @param tile Tile
-     * @param row Row starting at 0
-     * @param column Column starting at 0
-     */
-    private void createTileButton(ITile tile, int row, int column) {
-        Button button = new Button(this);
-        button.setText(tile.getName());
-        button.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, 1f));
-
-        for(int i = 0; i < appTable.getChildCount(); i++) {
-            TableRow r = (TableRow)appTable.getChildAt(i);
-
-            if(r.getChildCount() < columns)
-                r.addView(button);
-        }
-
-        tiles.add(new TileButtonPack(tile, button));
     }
 
     private void toggleFullscreen(boolean value) {

@@ -64,6 +64,156 @@
                     android:layout_margin="5dp"/>
             </TableRow>
 
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="3">
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="YouTube"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Visual Studio"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Blender"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="3">
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Games Folder"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Shopping List.txt"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Toggle Ceiling Lights"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="3">
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Eject USB"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Play Despacito 2"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Open Spotify"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="3">
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Close Spotify"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Call Mike"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Pour Coffee"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="3">
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Order Cheetos"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Order Pizza"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+
+                <Button
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:text="Open Chrome"
+                    android:textColor="@color/colorAltText"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+            </TableRow>
+
         </TableLayout>
     </ScrollView>
 

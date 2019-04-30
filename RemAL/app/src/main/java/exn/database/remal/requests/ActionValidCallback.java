@@ -1,4 +1,4 @@
-package exn.database.remal.deck;
+package exn.database.remal.requests;
 
 public interface ActionValidCallback {
     void run(boolean valid);

@@ -1,6 +1,5 @@
 package exn.database.remal.config;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -11,53 +10,18 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-import exn.database.remal.Deck;
 import exn.database.remal.core.RemAL;
 import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.devices.RemoteMultiDevice;
-import exn.database.remal.deck.DeckTile;
-import exn.database.remal.deck.ITile;
+
+import static exn.database.remal.core.RemAL.getMainActivity;
 
 public class PersistenceUtils {
     private static final String PACKAGE = "exn.database.remal",
             PATH_DEVICES = "devices",
-            PATH_TILES = "tiles";
+            PATH_REQUESTS = "requests";
 
     private static SharedPreferences preferences;
-
-    public static void loadPreferences(Activity activity) {
-        preferences = activity.getSharedPreferences(PACKAGE, Context.MODE_PRIVATE);
-    }
-
-    public static ITile[] loadTiles() {
-        List<ITile> tiles = new ArrayList<>();
-
-        for(int i = 0; i < Deck.MAX_COLUMNS; i++) {
-            for(int j = 0; j < Deck.MAX_ROWS; j++) {
-                String key = PATH_TILES + "." + i + "-" + j;
-
-                if(preferences.contains(key)) {
-                    try {
-                        ITile tile = new DeckTile();
-                        tile.load(new JSONObject(loadValue(key)));
-                        tiles.add(tile);
-                    } catch(JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-
-        return tiles.toArray(new ITile[0]);
-    }
-
-    public static void saveTile(ITile tile) throws JSONException {
-        saveValue(PATH_TILES + "." + tile.getRow() + "-" + tile.getColumn(), tile.save());
-    }
-
-    public static void removeTile(ITile tile) throws JSONException {
-
-    }
 
     public static void addToDevicePath(IRemoteDevice device) throws JSONException {
         JSONArray savedDevices = new JSONArray(loadValue(PATH_DEVICES, "[]"));
@@ -104,6 +68,8 @@ public class PersistenceUtils {
      * Loads saved devices and requests
      */
     public static IRemoteDevice[] loadDevices() {
+        loadPreferences();
+
         //preferences.edit().clear().apply();
         /*
         System.out.println("PRINTING PREFS");
@@ -141,19 +107,27 @@ public class PersistenceUtils {
         return devices;
     }
 
-    public static void saveValue(String name, String value) {
+    private static void loadPreferences() {
+        if(getMainActivity() != null)
+            preferences = getMainActivity().getSharedPreferences(PACKAGE, Context.MODE_PRIVATE);
+    }
+
+    private static void saveValue(String name, String value) {
+        loadPreferences();
         preferences.edit().putString(name, value).apply();
     }
 
-    public static String loadValue(String name, String defaultString) {
+    private static String loadValue(String name, String defaultString) {
+        loadPreferences();
         return preferences.getString(name, defaultString);
     }
 
-    public static String loadValue(String name) {
-        return loadValue(name, "");
+    private static void removeSave(String name) {
+        loadPreferences();
+        preferences.edit().remove(name).apply();
     }
 
-    public static void removeValue(String name) {
-        preferences.edit().remove(name).apply();
+    private static String loadValue(String name) {
+        return loadValue(name, "");
     }
 }

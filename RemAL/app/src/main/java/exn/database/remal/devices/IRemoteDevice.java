@@ -1,7 +1,7 @@
 package exn.database.remal.devices;
 
 import exn.database.remal.config.IPersistent;
-import exn.database.remal.deck.ActionValidCallback;
+import exn.database.remal.requests.ActionValidCallback;
 
 /**
  * A device that can be connected to and sent commands

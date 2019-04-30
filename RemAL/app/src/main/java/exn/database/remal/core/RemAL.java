@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import exn.database.remal.config.PersistenceUtils;
 import exn.database.remal.devices.IRemoteDevice;
@@ -16,14 +17,13 @@ import exn.database.remal.devices.RemoteMultiDevice;
 import exn.database.remal.events.DeviceCreatedEvent;
 import exn.database.remal.events.DeviceDestroyedEvent;
 import exn.database.remal.events.DeviceRenamedEvent;
-import exn.database.remal.events.TileCreatedEvent;
-import exn.database.remal.deck.DeckTile;
-import exn.database.remal.deck.ITile;
+import exn.database.remal.requests.DeckTile;
+import exn.database.remal.requests.IRemoteRequest;
 
 public final class RemAL {
     /** List of existing devices */
     private static final HashMap<String, IRemoteDevice> devices = new HashMap<>();
-    private static final List<ITile> tiles = new ArrayList<>();
+    private static final List<IRemoteRequest> requests = new ArrayList<>();
     private static final List<IRemalEventListener> listeners = new ArrayList<>();
     private static Activity activity;
 
@@ -37,30 +37,18 @@ public final class RemAL {
         return activity;
     }
 
-    /**
-     * Displays a toast
-     * @param text Text to show in the toast
-     */
     public static void displayText(String text) {
         activity.runOnUiThread(() -> Toast.makeText(activity, text, Toast.LENGTH_SHORT).show());
     }
 
     /**
-     * @return A newly created app tile
+     * @return A newly created app request
      */
-    public static ITile createTile(IRemoteDevice device, int row, int column) {
-        ITile tile = new DeckTile(device, row, column);
-        tiles.add(tile);
+    public static DeckTile createTile(IRemoteDevice device, int row, int column) {
+        DeckTile request = new DeckTile(device, row, column);
+        requests.add(request);
 
-        try {
-            PersistenceUtils.saveTile(tile);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        post(new TileCreatedEvent(tile));
-
-        return tile;
+        return request;
     }
 
     /**
@@ -73,14 +61,6 @@ public final class RemAL {
         }
     }
 
-    public static void loadTiles() {
-        for(ITile tile : PersistenceUtils.loadTiles())
-            tiles.add(tile);
-    }
-
-    /**
-     * @return An array of all the devices sorted by name
-     */
     public static IRemoteDevice[] getDevices() {
         List<IRemoteDevice> sortedDevices = new ArrayList<>(devices.values());
         Collections.sort(sortedDevices, (lhs, rhs) -> lhs.getName().compareTo(rhs.getName()));
@@ -89,10 +69,10 @@ public final class RemAL {
     }
 
     /**
-     * @return An array containing all the tiles
+     * Returns a list of created macros
      */
-    public static ITile[] getTiles() {
-        return tiles.toArray(new ITile[0]);
+    public List<IRemoteRequest> getRequests() {
+        return requests;
     }
 
     /**
@@ -158,19 +138,17 @@ public final class RemAL {
     public static void deleteDevice(String name) {
         IRemoteDevice device = devices.remove(name);
 
-        if(device != null) {
-            if(device.isConnected())
-                device.disconnect();
+        if(device != null && device.isConnected())
+            device.disconnect();
 
-            try {
-                PersistenceUtils.removeFromDevicePath(device);
-                PersistenceUtils.removeDeviceSave(device);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            post(new DeviceDestroyedEvent(device));
+        try {
+            PersistenceUtils.removeFromDevicePath(device);
+            PersistenceUtils.removeDeviceSave(device);
+        } catch(JSONException e) {
+            e.printStackTrace();
         }
+
+        post(new DeviceDestroyedEvent(device));
     }
 
     /**
