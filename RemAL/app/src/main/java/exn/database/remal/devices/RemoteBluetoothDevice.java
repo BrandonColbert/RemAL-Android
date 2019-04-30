@@ -1,9 +1,6 @@
 package exn.database.remal.devices;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import exn.database.remal.requests.ActionValidCallback;
+import exn.database.remal.deck.ActionValidCallback;
 
 public class RemoteBluetoothDevice extends RemoteDevice {
     public RemoteBluetoothDevice(String name) {

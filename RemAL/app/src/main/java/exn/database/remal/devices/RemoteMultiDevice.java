@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import exn.database.remal.core.RemAL;
-import exn.database.remal.requests.ActionValidCallback;
+import exn.database.remal.deck.ActionValidCallback;
 
 /**
  * Handles connections and command sending to devices
@@ -163,8 +163,6 @@ public class RemoteMultiDevice extends RemoteDevice {
 
     @Override
     public JSONObject save(JSONObject data) throws JSONException {
-        super.save(data);
-
         for(Map.Entry<MultiDeviceMode, SubDevicePack> entry : subdevices.entrySet()) {
             SubDevicePack pack = entry.getValue();
             IRemoteDevice device = pack.getDevice();
@@ -175,7 +173,7 @@ public class RemoteMultiDevice extends RemoteDevice {
             data.put(SUBDEVICE_PREFIX + key + SUBDEVICE_ORDER_POSTFIX, pack.isEnabled());
         }
 
-        return data;
+        return super.save(data);
     }
 
     @Override

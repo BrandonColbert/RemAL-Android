@@ -1,4 +1,4 @@
-package exn.database.remal.requests;
+package exn.database.remal.deck;
 
 import org.json.JSONException;
 import org.json.JSONObject;

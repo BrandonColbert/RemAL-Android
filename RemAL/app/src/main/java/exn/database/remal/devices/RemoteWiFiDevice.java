@@ -14,7 +14,7 @@ import exn.database.remal.core.RemAL;
 import exn.database.remal.events.DeviceConfigChangedEvent;
 import exn.database.remal.events.DeviceConnectEvent;
 import exn.database.remal.events.DeviceDisconnectEvent;
-import exn.database.remal.requests.ActionValidCallback;
+import exn.database.remal.deck.ActionValidCallback;
 
 /**
  * Handles device access through LAN connection
@@ -49,12 +49,10 @@ public class RemoteWiFiDevice extends RemoteDevice {
 
     @Override
     public JSONObject save(JSONObject data) throws JSONException {
-        super.save(data);
-
         data.put("port", port);
         data.put("address", address);
 
-        return data;
+        return super.save(data);
     }
 
     @Override
