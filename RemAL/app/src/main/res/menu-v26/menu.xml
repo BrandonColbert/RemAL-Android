@@ -1,0 +1,21 @@
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/edit_devices"
+        android:icon="@drawable/ic_baseline_list_24px"
+        android:title="@string/edit_devices"
+        app:showAsAction="ifRoom"
+        android:iconTint="@color/colorAccent">
+    </item>
+
+    <item
+        android:id="@+id/edit_app_layout"
+        android:icon="@drawable/ic_baseline_create_24px"
+        android:title="@string/edit_layout"
+        app:showAsAction="ifRoom"
+        android:iconTint="@color/colorAccent">
+    </item>
+
+</menu>
