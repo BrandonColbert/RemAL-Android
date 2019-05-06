@@ -12,6 +12,7 @@ public class RemoteRequest implements IRemoteRequest {
 
     public RemoteRequest(IRemoteDevice device) {
         target = device;
+        request = "";
     }
 
     public RemoteRequest() {
@@ -37,7 +38,7 @@ public class RemoteRequest implements IRemoteRequest {
 
     @Override
     public JSONObject save(JSONObject data) throws JSONException {
-        data.put("device", getTargetDevice().getName());
+        data.put("device", getTargetDevice() != null ? getTargetDevice().getName() : "");
         data.put("request", request);
 
         return data;
@@ -45,7 +46,9 @@ public class RemoteRequest implements IRemoteRequest {
 
     @Override
     public void load(JSONObject data) throws JSONException {
-        setTargetDevice(RemAL.getDevice(data.getString("device")));
-        request = data.getString("address");
+        String deviceName = data.getString("device");
+
+        target = deviceName.isEmpty() ? null : RemAL.getDevice(deviceName);
+        request = data.getString("request");
     }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="tile_types">
+        <item>App</item>
+        <item>Macro</item>
+        <item>Command</item>
+    </string-array>
+
+    <string-array name="tile_types_values">
+        <item>app</item>
+        <item>macro</item>
+        <item>command</item>
+    </string-array>
+</resources>

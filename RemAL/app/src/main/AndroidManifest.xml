@@ -19,6 +19,7 @@
             android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="androd.intent.action.MAIN" />
+                <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -46,6 +47,16 @@
         <activity
             android:name=".DeckSettings"
             android:label="@string/title_activity_deck_settings"
+            android:theme="@style/AppTheme"
+            android:launchMode="singleTop">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".Deck"/>
+        </activity>
+
+        <activity
+            android:name=".TileOptions"
+            android:label="@string/title_activity_tile_options"
             android:theme="@style/AppTheme"
             android:launchMode="singleTop">
             <meta-data

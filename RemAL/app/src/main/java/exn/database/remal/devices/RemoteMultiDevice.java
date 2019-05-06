@@ -170,7 +170,7 @@ public class RemoteMultiDevice extends RemoteDevice {
 
             data.put(SUBDEVICE_PREFIX + key, device.save(new JSONObject()));
             data.put(SUBDEVICE_PREFIX + key + SUBDEVICE_ORDER_POSTFIX, pack.getOrder());
-            data.put(SUBDEVICE_PREFIX + key + SUBDEVICE_ORDER_POSTFIX, pack.isEnabled());
+            data.put(SUBDEVICE_PREFIX + key + SUBDEVICE_ENABLED_POSTFIX, pack.isEnabled());
         }
 
         return super.save(data);

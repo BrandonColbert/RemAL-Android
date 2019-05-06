@@ -1,0 +1,12 @@
+<menu xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context="exn.database.remal.Settings">
+
+    <item
+        android:id="@+id/delete_tile"
+        android:icon="@drawable/ic_baseline_delete_24px"
+        android:title="@string/delete_tile"
+        app:showAsAction="ifRoom">
+    </item>
+</menu>

@@ -1,0 +1,48 @@
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorPrimary">
+
+    <PreferenceCategory
+        android:key="category_options"
+        android:title="Settings"/>
+
+    <EditTextPreference
+        android:key="tile_name"
+        android:title="Name"
+        android:dialogLayout="@layout/layout_edit_text_single"/>
+
+    <ListPreference
+        android:key="tile_device"
+        android:title="Pick Device"/>
+
+    <ListPreference
+        android:key="tile_app"
+        android:title="Pick App"/>
+
+    <PreferenceCategory
+        android:key="category_advanced"
+        android:title="Advanced"/>
+
+    <ListPreference
+        android:key="tile_type"
+        android:title="Choose Type"
+        android:entries="@array/tile_types"
+        android:entryValues="@array/tile_types_values"/>
+
+    <EditTextPreference
+        android:key="details_command"
+        android:title="Set App Path"
+        android:dialogLayout="@layout/layout_edit_text_single"/>
+
+    <EditTextPreference
+        android:key="details_command"
+        android:title="Set Macro"
+        android:dialogLayout="@layout/layout_edit_text_single"/>
+
+    <EditTextPreference
+        android:key="details_command"
+        android:title="Set Shell Command"/>
+
+</PreferenceScreen>

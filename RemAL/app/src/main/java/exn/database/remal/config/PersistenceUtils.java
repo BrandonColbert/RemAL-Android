@@ -29,34 +29,29 @@ public class PersistenceUtils {
         preferences = activity.getSharedPreferences(PACKAGE, Context.MODE_PRIVATE);
     }
 
-    public static ITile[] loadTiles() {
-        List<ITile> tiles = new ArrayList<>();
+    public static SharedPreferences getPreferences() {
+        return preferences;
+    }
 
-        for(int i = 0; i < Deck.MAX_COLUMNS; i++) {
-            for(int j = 0; j < Deck.MAX_ROWS; j++) {
-                String key = PATH_TILES + "." + i + "-" + j;
+    public static ITile loadTile(int index) throws JSONException {
+        String key = PATH_TILES + "." + index;
 
-                if(preferences.contains(key)) {
-                    try {
-                        ITile tile = new DeckTile();
-                        tile.load(new JSONObject(loadValue(key)));
-                        tiles.add(tile);
-                    } catch(JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
+        if(preferences.contains(key)) {
+            ITile tile = new DeckTile();
+            tile.load(new JSONObject(loadValue(key, "{}")));
+
+            return tile;
         }
 
-        return tiles.toArray(new ITile[0]);
+        return null;
     }
 
     public static void saveTile(ITile tile) throws JSONException {
-        saveValue(PATH_TILES + "." + tile.getRow() + "-" + tile.getColumn(), tile.save());
+        saveValue(PATH_TILES + "." + tile.getIndex(), tile.save());
     }
 
-    public static void removeTile(ITile tile) throws JSONException {
-
+    public static void removeTile(ITile tile) {
+        removeValue(PATH_TILES + "." + tile.getIndex());
     }
 
     public static void addToDevicePath(IRemoteDevice device) throws JSONException {

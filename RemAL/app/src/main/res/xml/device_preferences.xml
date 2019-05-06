@@ -95,4 +95,13 @@
     <EditTextPreference
         android:key="ssh_address"
         android:title="Address"/>
+
+    <PreferenceCategory
+        android:key="category_other"
+        android:title="Other Settings"/>
+
+    <Preference
+        android:key="delete_device"
+        android:title="Delete"
+        android:summary="Removes this device"/>
 </PreferenceScreen>

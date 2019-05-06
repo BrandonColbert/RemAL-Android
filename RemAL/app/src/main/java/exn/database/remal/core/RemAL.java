@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.widget.Toast;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,15 +20,19 @@ import exn.database.remal.events.DeviceRenamedEvent;
 import exn.database.remal.events.TileCreatedEvent;
 import exn.database.remal.deck.DeckTile;
 import exn.database.remal.deck.ITile;
+import exn.database.remal.events.TileDestroyedEvent;
 
 public final class RemAL {
     /** List of existing devices */
     private static final HashMap<String, IRemoteDevice> devices = new HashMap<>();
-    private static final List<ITile> tiles = new ArrayList<>();
     private static final List<IRemalEventListener> listeners = new ArrayList<>();
     private static Activity activity;
 
     private RemAL() {}
+
+    public static void log(Object o) {
+        System.out.println("[RemAL-Log] " + o.toString());
+    }
 
     public static void setMainActivity(Activity activity) {
         RemAL.activity = activity;
@@ -48,19 +53,38 @@ public final class RemAL {
     /**
      * @return A newly created app tile
      */
-    public static ITile createTile(IRemoteDevice device, int row, int column) {
-        ITile tile = new DeckTile(device, row, column);
-        tiles.add(tile);
-
-        try {
-            PersistenceUtils.saveTile(tile);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
+    public static ITile createTile(IRemoteDevice device, int index) {
+        ITile tile = new DeckTile(device, index);
         post(new TileCreatedEvent(tile));
 
         return tile;
+    }
+
+    /**
+     * @param index Index of the tile
+     * @return The tile at the index
+     */
+    public static ITile getTile(int index) {
+        try {
+            return PersistenceUtils.loadTile(index);
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public static void saveTile(ITile tile) {
+        try {
+            PersistenceUtils.saveTile(tile);
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void deleteTile(ITile tile) {
+        PersistenceUtils.removeTile(tile);
+        post(new TileDestroyedEvent(tile));
     }
 
     /**
@@ -73,11 +97,6 @@ public final class RemAL {
         }
     }
 
-    public static void loadTiles() {
-        for(ITile tile : PersistenceUtils.loadTiles())
-            tiles.add(tile);
-    }
-
     /**
      * @return An array of all the devices sorted by name
      */
@@ -86,13 +105,6 @@ public final class RemAL {
         Collections.sort(sortedDevices, (lhs, rhs) -> lhs.getName().compareTo(rhs.getName()));
 
         return sortedDevices.toArray(new IRemoteDevice[0]);
-    }
-
-    /**
-     * @return An array containing all the tiles
-     */
-    public static ITile[] getTiles() {
-        return tiles.toArray(new ITile[0]);
     }
 
     /**

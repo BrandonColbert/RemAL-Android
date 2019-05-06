@@ -1,19 +1,22 @@
 package exn.database.remal.deck;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import exn.database.remal.core.RemAL;
 import exn.database.remal.devices.IRemoteDevice;
 
 public class DeckTile extends RemoteRequest implements ITile {
-    private int row, column;
+    private int index;
     private String name;
 
-    public DeckTile(IRemoteDevice device, int row, int column) {
+    public DeckTile(IRemoteDevice device, int index) {
         super(device);
-        this.row = row;
-        this.column = column;
-        this.name = "Button";
+        this.index = index;
+        this.name = "Unset";
     }
 
     public DeckTile() {
@@ -22,8 +25,7 @@ public class DeckTile extends RemoteRequest implements ITile {
 
     @Override
     public JSONObject save(JSONObject data) throws JSONException {
-        data.put("row", row);
-        data.put("column", column);
+        data.put("index", index);
         data.put("name", name);
 
         return super.save(data);
@@ -33,22 +35,16 @@ public class DeckTile extends RemoteRequest implements ITile {
     public void load(JSONObject data) throws JSONException {
         super.load(data);
 
-        row = data.getInt("row");
-        column = data.getInt("column");
+        index = data.getInt("index");
         name = data.getString("name");
     }
 
-    public void setPos(int row, int column) {
-        this.row = row;
-        this.column = column;
+    public void setPosition(int index) {
+        this.index = index;
     }
 
-    public int getRow() {
-        return row;
-    }
-
-    public int getColumn() {
-        return column;
+    public int getIndex() {
+        return index;
     }
 
     public String getName() {
@@ -57,5 +53,42 @@ public class DeckTile extends RemoteRequest implements ITile {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public static final Parcelable.Creator<DeckTile> CREATOR = new Parcelable.Creator<DeckTile>() {
+        public DeckTile createFromParcel(Parcel source) {
+            DeckTile tile = new DeckTile();
+            tile.readFromParcel(source);
+
+            return tile;
+        }
+
+        public DeckTile[] newArray(int size) {
+            return new DeckTile[size];
+        }
+    };
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel parcel, int i) {
+        parcel.writeString(getTargetDevice() == null ? "" : getTargetDevice().getName());
+        parcel.writeString(getRequest());
+        parcel.writeInt(index);
+        parcel.writeString(name);
+    }
+
+    public void readFromParcel(Parcel parcel) {
+        String deviceName = parcel.readString();
+
+        if(!deviceName.isEmpty())
+            setTargetDevice(RemAL.getDevice(deviceName));
+
+        setRequest(parcel.readString());
+        index = parcel.readInt();
+        name = parcel.readString();
     }
 }

@@ -10,4 +10,6 @@
     <string name="disconnect">Disconnect</string>
     <string name="edit_settings">Edit Settings</string>
     <string name="title_activity_deck_settings"/>
+    <string name="title_activity_tile_options"/>
+    <string name="delete_tile">Delete tile</string>
 </resources>

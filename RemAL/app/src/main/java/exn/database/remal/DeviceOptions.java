@@ -36,7 +36,7 @@ public class DeviceOptions  extends AppCompatActivity implements IRemalEventList
             DeviceOptionsFragment frag = new DeviceOptionsFragment();
             frag.setDevice((RemoteMultiDevice)device);
 
-            getSupportFragmentManager().beginTransaction().replace(R.id.option_content, frag).commit();
+            getSupportFragmentManager().beginTransaction().replace(R.id.device_options_content, frag).commit();
         }
 
         updateTitle();

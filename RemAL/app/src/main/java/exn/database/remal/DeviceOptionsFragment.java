@@ -74,7 +74,9 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
     public boolean onPreferenceChange(Preference pref, Object newValue) {
         try {
-            switch (pref.getKey()) {
+            //TODO: Make sure everything is saved
+
+            switch(pref.getKey()) {
                 case "device_name":
                     if (RemAL.renameDevice(pref.getSummary().toString(), newValue.toString()))
                         pref.setSummary(device.getName());
@@ -99,7 +101,6 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                     break;
                 }
                 case "lan_device_list": {
-                    ListPreference p = (ListPreference) pref;
                     RemoteLanDevice d = device.getSubDevice(RemoteLanDevice.class);
 
                     d.setAddress(newValue.toString());
@@ -110,7 +111,7 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                 case "wifi_port": {
                     RemoteWiFiDevice d = device.getSubDevice(RemoteWiFiDevice.class);
 
-                    if (newValue.toString().length() > 0) {
+                    if(newValue.toString().length() > 0) {
                         d.setPort(Integer.valueOf(newValue.toString()));
                         pref.setSummary(String.valueOf(d.getPort()));
                     }
@@ -219,6 +220,12 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
                 pack.setEnabled(!pack.isEnabled());
                 ((SwitchPreference)pref).setChecked(pack.isEnabled());
+
+                break;
+            }
+            case "delete_device": {
+                RemAL.deleteDevice(device.getName());
+                getActivity().finish();
 
                 break;
             }

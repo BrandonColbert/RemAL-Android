@@ -20,7 +20,7 @@
     </android.support.v7.widget.Toolbar>
 
     <LinearLayout
-        android:id="@+id/option_content"
+        android:id="@+id/device_options_content"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginBottom="0dp"

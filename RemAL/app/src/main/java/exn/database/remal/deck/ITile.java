@@ -1,24 +1,20 @@
 package exn.database.remal.deck;
 
+import android.os.Parcelable;
+
 import exn.database.remal.config.IPersistent;
 
-public interface ITile extends IPersistent {
+public interface ITile extends IPersistent, IRemoteRequest, Parcelable {
     /**
-     * Set the row and column for this tile
-     * @param row Get the row for this tile
-     * @param column Get the column for this tile
+     * Sets the index to be used in determining the row and column
+     * @param index The position of this tile
      */
-    void setPos(int row, int column);
+    void setPosition(int index);
 
     /**
-     * @return The row where this tile should be displayed
+     * @return The index where this tile should be displayed
      */
-    int getRow();
-
-    /**
-     * @return The column where this tile should be displayed
-     */
-    int getColumn();
+    int getIndex();
 
     String getName();
 
