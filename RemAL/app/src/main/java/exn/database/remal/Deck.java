@@ -3,8 +3,11 @@ package exn.database.remal;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.Intent;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.SystemClock;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -15,6 +18,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 
@@ -39,6 +43,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
     private TableLayout appTable;
     private Toolbar toolbar;
     private boolean isEditing;
+    private int scrollDirection, scrollSpeedModifier;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,8 +56,10 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
         //TODO: Remove
         //PersistenceUtils.getPreferences().edit().clear().apply();
+        /*
         for(Map.Entry<String, ?> e : PersistenceUtils.getPreferences().getAll().entrySet())
             RemAL.log(e.getKey() + ": " + e.getValue());
+        */
 
         appTable = findViewById(R.id.app_table);
         toolbar = findViewById(R.id.toolbar);
@@ -80,6 +87,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
         toggleEditMode(false);
 
         RemAL.register(this);
+        setupDragScroll();
     }
 
     @Override
@@ -139,6 +147,98 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
     }
 
     /**
+     * Allows scrolling when moving tiles by moving near the top and bottom of the screen
+     */
+    private void setupDragScroll() {
+        final float maxSpeed = 3f;
+        scrollDirection = 0;
+        scrollSpeedModifier = 1;
+
+        final ScrollView deckScroll = findViewById(R.id.deckScroll);
+        final Handler scrollHandler = new Handler();
+        final Runnable scrollRun = new Runnable() {
+            public void run() {
+                //Only scroll when a direction is given
+                if(scrollDirection != 0) {
+                    deckScroll.smoothScrollBy(0, scrollDirection * 10 * scrollSpeedModifier);
+                    scrollHandler.postDelayed(this, 5);
+                }
+            }
+        };
+
+        //Handle upwards scrolling
+        findViewById(R.id.deckScrollTop).setOnDragListener((v, e) -> {
+            switch(e.getAction()) {
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    //Start scrolling
+                    scrollDirection = -1;
+                    scrollHandler.removeCallbacks(scrollRun);
+                    scrollHandler.post(scrollRun);
+                    break;
+                case DragEvent.ACTION_DRAG_LOCATION:
+                    //Scale
+                    scrollSpeedModifier = Math.round(maxSpeed * (1f - e.getY() / (float)v.getHeight()));
+                    break;
+                case DragEvent.ACTION_DRAG_ENDED: case DragEvent.ACTION_DRAG_EXITED:
+                    //Reset scroll
+                    scrollDirection = 0;
+                    scrollSpeedModifier = 1;
+                    scrollHandler.removeCallbacks(scrollRun);
+                    break;
+                case DragEvent.ACTION_DROP:
+                    //Pass to scroll view since this view shouldn't use the drop event
+                    //deckScroll.dispatchDragEvent(e);
+
+                    for(int i = 0; i < deckScroll.getChildCount(); i++) {
+                        Rect hit = new Rect();
+                        View sub = appTable.getChildAt(i);
+                        sub.getHitRect(hit);
+
+                        int x = Math.round(v.getX() + e.getX());
+                        int y = Math.round(v.getY() + e.getY());
+
+                        RemAL.log("Looking: " + x + ", " + y);
+
+                        if(hit.contains(x, y)) {
+                            RemAL.log("Hit row: " + appTable.indexOfChild(sub));
+
+
+                            sub.dispatchDragEvent(e);
+                        }
+                    }
+
+                    break;
+            }
+
+            return true;
+        });
+
+        //Handle downwards scrolling
+        findViewById(R.id.deckScrollBottom).setOnDragListener((v, e) -> {
+            switch(e.getAction()) {
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    scrollDirection = 1;
+                    scrollHandler.removeCallbacks(scrollRun);
+                    scrollHandler.post(scrollRun);
+                    break;
+                case DragEvent.ACTION_DRAG_LOCATION:
+                    scrollSpeedModifier = Math.round(maxSpeed * e.getY() / (float)v.getHeight());
+                    break;
+                case DragEvent.ACTION_DRAG_ENDED: case DragEvent.ACTION_DRAG_EXITED:
+                    scrollDirection = 0;
+                    scrollSpeedModifier = 1;
+                    scrollHandler.removeCallbacks(scrollRun);
+                    break;
+                case DragEvent.ACTION_DROP:
+                    deckScroll.dispatchDragEvent(e);
+                    break;
+            }
+
+            return true;
+        });
+    }
+
+    /**
      * Toggles fullscreen mode
      * @param value Whether to be fullscreen
      */
@@ -147,17 +247,20 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
         ActionBar actionBar = getSupportActionBar();
 
-        if(actionBar != null) {
-            if(value)
+        if(value) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+            if(isEditing)
+                toggleEditMode(false);
+
+            if(actionBar != null)
                 actionBar.hide();
-            else
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+            if(actionBar != null)
                 actionBar.show();
         }
-
-        if(value)
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        else
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
     }
 
     /**
@@ -308,20 +411,23 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             switch(e.getAction()) {
                 case DragEvent.ACTION_DROP:
                     int index = Integer.valueOf(e.getClipData().getItemAt(0).getText().toString());
+                    int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
+                    int staticIndex = appTable.indexOfChild((TableRow)v.getParent()) * columns + ((TableRow)v.getParent()).indexOfChild(v);
 
-                    RemAL.log("Swapping " + index + " with " + button.getTile().getPosition());
+                    ITile movedTile = RemAL.getTile(index);
+                    ITile staticTile = RemAL.getTile(staticIndex);
 
-                    ITile draggedTile = RemAL.getTile(index);
-                    draggedTile.setPosition(button.getTile().getPosition());
-                    button.getTile().setPosition(index);
+                    if(movedTile != null)
+                        movedTile.setPosition(staticIndex);
 
-                    RemAL.post(new TileChangedEvent(draggedTile));
-                    RemAL.post(new TileChangedEvent(button.getTile()));
+                    if(staticTile != null)
+                        staticTile.setPosition(index);
 
-                    RemAL.saveTile(draggedTile);
-                    RemAL.saveTile(button.getTile());
+                    RemAL.saveTile(movedTile);
+                    RemAL.saveTile(staticTile);
 
-                    v.invalidate();
+                    RemAL.post(new TileChangedEvent(movedTile));
+                    RemAL.post(new TileChangedEvent(staticTile));
                     break;
             }
 
@@ -367,20 +473,30 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             switch(e.getAction()) {
                 case DragEvent.ACTION_DROP:
                     int index = Integer.valueOf(e.getClipData().getItemAt(0).getText().toString());
-
                     int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
-                    int row = index / columns;
-                    int column = index % columns;
-                    TableRow originalRow = (TableRow)appTable.getChildAt(row);
-                    originalRow.removeViewAt(column);
-                    originalRow.addView(createPlaceholderView(), column);
+
+                    TableRow originalRow = (TableRow)appTable.getChildAt(index / columns);
+                    if(originalRow != null) {
+                        int column = index % columns;
+                        originalRow.removeViewAt(column);
+                        originalRow.addView(createPlaceholderView(), column);
+                    }
 
                     TableRow rowView = (TableRow)v.getParent();
-                    int relativeIndex = rowView.indexOfChild(v);
-                    rowView.removeViewAt(relativeIndex);
-                    rowView.addView(createTileButton(RemAL.getTile(index)), relativeIndex);
+                    if(rowView != null) {
+                        int relativeIndex = rowView.indexOfChild(v);
+                        int newIndex = appTable.indexOfChild(rowView) * columns + relativeIndex;
 
-                    v.invalidate();
+                        ITile movedTile = RemAL.getTile(index);
+                        if(movedTile != null) {
+                            RemAL.deleteTile(movedTile);
+                            movedTile.setPosition(newIndex);
+                            RemAL.saveTile(movedTile);
+                        }
+
+                        rowView.removeViewAt(relativeIndex);
+                        rowView.addView(createTileButton(movedTile), relativeIndex);
+                    }
                     break;
             }
 

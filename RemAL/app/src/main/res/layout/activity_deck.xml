@@ -16,10 +16,12 @@
         app:titleTextColor="@color/colorAccent"
         android:animateLayoutChanges="true"
         android:theme="@style/ToolbarTheme"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        tools:ignore="MissingConstraints">
     </android.support.v7.widget.Toolbar>
 
     <ScrollView
+        android:id="@+id/deckScroll"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fillViewport="true"
@@ -31,9 +33,30 @@
         <TableLayout
             android:id="@+id/app_table"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_horizontal">
-        </TableLayout>
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"/>
     </ScrollView>
+
+    <View
+        android:id="@+id/deckScrollTop"
+        android:layout_width="0dp"
+        android:layout_height="75dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="@+id/deckScroll"
+        app:layout_constraintEnd_toEndOf="@+id/deckScroll"
+        app:layout_constraintStart_toStartOf="@+id/deckScroll"
+        app:layout_constraintTop_toTopOf="@+id/deckScroll"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <View
+        android:id="@+id/deckScrollBottom"
+        android:layout_width="0dp"
+        android:layout_height="75dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="@+id/deckScroll"
+        app:layout_constraintEnd_toEndOf="@+id/deckScroll"
+        app:layout_constraintStart_toStartOf="@+id/deckScroll"
+        app:layout_constraintTop_toTopOf="@+id/deckScroll"
+        app:layout_constraintVertical_bias="1.0" />
 
 </android.support.constraint.ConstraintLayout>
