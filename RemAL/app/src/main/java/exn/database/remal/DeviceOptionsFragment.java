@@ -31,7 +31,10 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
         for(int i = 0; i < screen.getPreferenceCount(); i++) {
             Preference pref = screen.getPreference(i);
-            initPreference(pref);
+
+            if(device != null)
+                initPreference(pref);
+
             pref.setOnPreferenceChangeListener(this);
             pref.setOnPreferenceClickListener(this);
         }
@@ -78,15 +81,17 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
             switch(pref.getKey()) {
                 case "device_name":
-                    if (RemAL.renameDevice(pref.getSummary().toString(), newValue.toString()))
+                    if(RemAL.renameDevice(pref.getSummary().toString(), newValue.toString()))
                         pref.setSummary(device.getName());
 
                     break;
                 case "lan_port": {
                     RemoteLanDevice d = device.getSubDevice(RemoteLanDevice.class);
 
-                    if (newValue.toString().length() > 0) {
+                    if(newValue.toString().length() > 0) {
                         d.setPort(Integer.valueOf(newValue.toString()));
+						RemAL.saveDevice(device);
+
                         pref.setSummary(String.valueOf(d.getPort()));
                     }
 
@@ -94,16 +99,17 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                 }
                 case "lan_address": {
                     RemoteLanDevice d = device.getSubDevice(RemoteLanDevice.class);
-
                     d.setAddress(newValue.toString());
-                    pref.setSummary(d.getAddress());
+                    RemAL.saveDevice(device);
 
+                    pref.setSummary(d.getAddress());
                     break;
                 }
                 case "lan_device_list": {
                     RemoteLanDevice d = device.getSubDevice(RemoteLanDevice.class);
-
                     d.setAddress(newValue.toString());
+					RemAL.saveDevice(device);
+
                     findPreference("lan_address").setSummary(d.getAddress());
 
                     break;
@@ -113,6 +119,8 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
                     if(newValue.toString().length() > 0) {
                         d.setPort(Integer.valueOf(newValue.toString()));
+						RemAL.saveDevice(device);
+
                         pref.setSummary(String.valueOf(d.getPort()));
                     }
 
@@ -120,10 +128,10 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                 }
                 case "wifi_address": {
                     RemoteWiFiDevice d = device.getSubDevice(RemoteWiFiDevice.class);
-
                     d.setAddress(newValue.toString());
-                    pref.setSummary(d.getAddress());
+					RemAL.saveDevice(device);
 
+                    pref.setSummary(d.getAddress());
                     break;
                 }
             }
@@ -142,16 +150,18 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                 break;
             case "usb_enabled": {
                 SubDevicePack pack = device.getPack(MultiDeviceMode.USB);
-
                 pack.setEnabled(!pack.isEnabled());
+                RemAL.saveDevice(device);
+
                 ((SwitchPreference)pref).setChecked(pack.isEnabled());
 
                 break;
             }
             case "lan_enabled": {
                 SubDevicePack pack = device.getPack(MultiDeviceMode.LAN);
-
                 pack.setEnabled(!pack.isEnabled());
+                RemAL.saveDevice(device);
+
                 ((SwitchPreference)pref).setChecked(pack.isEnabled());
 
                 break;
@@ -195,16 +205,18 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
             }
             case "bt_enabled":{
                 SubDevicePack pack = device.getPack(MultiDeviceMode.BLUETOOTH);
-
                 pack.setEnabled(!pack.isEnabled());
+                RemAL.saveDevice(device);
+
                 ((SwitchPreference)pref).setChecked(pack.isEnabled());
 
                 break;
             }
             case "wifi_enabled": {
                 SubDevicePack pack = device.getPack(MultiDeviceMode.WIFI);
-
                 pack.setEnabled(!pack.isEnabled());
+                RemAL.saveDevice(device);
+
                 ((SwitchPreference)pref).setChecked(pack.isEnabled());
 
                 break;
@@ -217,8 +229,9 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                 break;
             case "ssh_enabled": {
                 SubDevicePack pack = device.getPack(MultiDeviceMode.SSH);
-
                 pack.setEnabled(!pack.isEnabled());
+                RemAL.saveDevice(device);
+
                 ((SwitchPreference)pref).setChecked(pack.isEnabled());
 
                 break;

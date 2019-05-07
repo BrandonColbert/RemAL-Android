@@ -21,6 +21,7 @@
         android:key="tile_app"
         android:title="Pick App"/>
 
+    <!--
     <PreferenceCategory
         android:key="category_advanced"
         android:title="Advanced"/>
@@ -32,17 +33,18 @@
         android:entryValues="@array/tile_types_values"/>
 
     <EditTextPreference
-        android:key="details_command"
+        android:key="details_app_path"
         android:title="Set App Path"
         android:dialogLayout="@layout/layout_edit_text_single"/>
 
     <EditTextPreference
-        android:key="details_command"
+        android:key="details_macro"
         android:title="Set Macro"
         android:dialogLayout="@layout/layout_edit_text_single"/>
 
     <EditTextPreference
         android:key="details_command"
-        android:title="Set Shell Command"/>
+        android:title="Set Command"/>
+    -->
 
 </PreferenceScreen>

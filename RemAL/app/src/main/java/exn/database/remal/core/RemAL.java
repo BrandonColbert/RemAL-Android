@@ -150,7 +150,7 @@ public final class RemAL {
                 try {
                     PersistenceUtils.addToDevicePath(device);
                     PersistenceUtils.saveDevice(device);
-                } catch (JSONException e) {
+                } catch(JSONException e) {
                     e.printStackTrace();
                 }
 
@@ -161,6 +161,14 @@ public final class RemAL {
         }
 
         return false;
+    }
+
+    public static void saveDevice(IRemoteDevice device) {
+        try {
+            PersistenceUtils.saveDevice(device);
+        } catch(JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -220,7 +228,9 @@ public final class RemAL {
      * @param event Event to post
      */
     public static void post(RemalEvent event) {
-        for(IRemalEventListener listener : listeners)
+        IRemalEventListener[] arr = listeners.toArray(new IRemalEventListener[0]);
+
+        for(IRemalEventListener listener : arr)
             listener.onRemalEvent(event);
     }
 }

@@ -14,7 +14,7 @@ public interface ITile extends IPersistent, IRemoteRequest, Parcelable {
     /**
      * @return The index where this tile should be displayed
      */
-    int getIndex();
+    int getPosition();
 
     String getName();
 

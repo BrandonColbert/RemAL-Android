@@ -8,6 +8,7 @@ import org.json.JSONObject;
 
 import exn.database.remal.core.RemAL;
 import exn.database.remal.devices.IRemoteDevice;
+import exn.database.remal.events.TileChangedEvent;
 
 public class DeckTile extends RemoteRequest implements ITile {
     private int index;
@@ -16,7 +17,7 @@ public class DeckTile extends RemoteRequest implements ITile {
     public DeckTile(IRemoteDevice device, int index) {
         super(device);
         this.index = index;
-        this.name = "Unset";
+        this.name = "";
     }
 
     public DeckTile() {
@@ -41,9 +42,10 @@ public class DeckTile extends RemoteRequest implements ITile {
 
     public void setPosition(int index) {
         this.index = index;
+        RemAL.post(new TileChangedEvent(this));
     }
 
-    public int getIndex() {
+    public int getPosition() {
         return index;
     }
 
@@ -51,8 +53,21 @@ public class DeckTile extends RemoteRequest implements ITile {
         return name;
     }
 
+    @Override
+    public void setTargetDevice(IRemoteDevice device) {
+        super.setTargetDevice(device);
+        RemAL.post(new TileChangedEvent(this));
+    }
+
+    @Override
+    public void setRequest(String request) {
+        super.setRequest(request);
+        RemAL.post(new TileChangedEvent(this));
+    }
+
     public void setName(String name) {
         this.name = name;
+        RemAL.post(new TileChangedEvent(this));
     }
 
     public static final Parcelable.Creator<DeckTile> CREATOR = new Parcelable.Creator<DeckTile>() {
@@ -85,9 +100,9 @@ public class DeckTile extends RemoteRequest implements ITile {
         String deviceName = parcel.readString();
 
         if(!deviceName.isEmpty())
-            setTargetDevice(RemAL.getDevice(deviceName));
+            target = RemAL.getDevice(deviceName);
 
-        setRequest(parcel.readString());
+        request = parcel.readString();
         index = parcel.readInt();
         name = parcel.readString();
     }

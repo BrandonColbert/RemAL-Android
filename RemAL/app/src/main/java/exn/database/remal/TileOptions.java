@@ -29,7 +29,9 @@ public class TileOptions extends AppCompatActivity {
         if(bar != null)
             bar.setDisplayHomeAsUpEnabled(true);
 
-        getSupportFragmentManager().beginTransaction().replace(R.id.tile_options_content, new TileOptionsFragment()).commit();
+        TileOptionsFragment frag = new TileOptionsFragment();
+        frag.setTile(tile);
+        getSupportFragmentManager().beginTransaction().replace(R.id.tile_options_content, frag).commit();
     }
 
     public boolean onCreateOptionsMenu(Menu menu) {

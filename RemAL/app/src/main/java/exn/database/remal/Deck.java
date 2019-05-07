@@ -1,22 +1,22 @@
 package exn.database.remal;
 
+import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
-import android.service.quicksettings.Tile;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.TableLayout;
 import android.widget.TableRow;
-
-import org.json.JSONException;
 
 import java.util.Map;
 
@@ -25,7 +25,9 @@ import exn.database.remal.core.IRemalEventListener;
 import exn.database.remal.core.RemAL;
 import exn.database.remal.core.RemalEvent;
 import exn.database.remal.deck.ITile;
+import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.events.ColumnAmountChangedEvent;
+import exn.database.remal.events.TileChangedEvent;
 import exn.database.remal.events.TileDestroyedEvent;
 import exn.database.remal.ui.SquareView;
 import exn.database.remal.ui.TileButton;
@@ -49,10 +51,8 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
         //TODO: Remove
         //PersistenceUtils.getPreferences().edit().clear().apply();
-        /*
         for(Map.Entry<String, ?> e : PersistenceUtils.getPreferences().getAll().entrySet())
             RemAL.log(e.getKey() + ": " + e.getValue());
-        */
 
         appTable = findViewById(R.id.app_table);
         toolbar = findViewById(R.id.toolbar);
@@ -128,7 +128,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
         if(event instanceof ColumnAmountChangedEvent) {
             updateView(((ColumnAmountChangedEvent)event).columns);
         } else if(event instanceof TileDestroyedEvent) {
-            int index = ((TileDestroyedEvent)event).tile.getIndex();
+            int index = ((TileDestroyedEvent)event).tile.getPosition();
             int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
             int column = index % columns;
 
@@ -224,7 +224,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                 if(view instanceof TileButton) {
                     TileButton button = (TileButton)view;
 
-                    int index = button.getTile().getIndex();
+                    int index = button.getTile().getPosition();
 
                     int row = index / columns;
                     int column = index % columns;
@@ -265,7 +265,6 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
      */
     private TileButton createTileButton(ITile tile) {
         TileButton button = new TileButton(this);
-        button.setText(tile.getName());
         button.setTextColor(getResources().getColor(R.color.colorAltText));
         button.setTile(tile);
 
@@ -285,6 +284,48 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
                 button.getTile().send((valid) -> {});
             }
+
+
+        });
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            button.setOnLongClickListener(v -> {
+                if(isEditing) {
+                    String posString = String.valueOf(tile.getPosition());
+
+                    v.startDragAndDrop(
+                        new ClipData(posString, new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, new ClipData.Item(posString)),
+                        new View.DragShadowBuilder(v),
+                        v, 0
+                    );
+                }
+
+                return true;
+            });
+        }
+
+        button.setOnDragListener((v, e) -> {
+            switch(e.getAction()) {
+                case DragEvent.ACTION_DROP:
+                    int index = Integer.valueOf(e.getClipData().getItemAt(0).getText().toString());
+
+                    RemAL.log("Swapping " + index + " with " + button.getTile().getPosition());
+
+                    ITile draggedTile = RemAL.getTile(index);
+                    draggedTile.setPosition(button.getTile().getPosition());
+                    button.getTile().setPosition(index);
+
+                    RemAL.post(new TileChangedEvent(draggedTile));
+                    RemAL.post(new TileChangedEvent(button.getTile()));
+
+                    RemAL.saveTile(draggedTile);
+                    RemAL.saveTile(button.getTile());
+
+                    v.invalidate();
+                    break;
+            }
+
+            return true;
         });
 
         return button;
@@ -309,7 +350,8 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             int relativeIndex = rowView.indexOfChild(v);
             int index = appTable.indexOfChild(rowView) * columns + relativeIndex;
 
-            ITile tile = RemAL.createTile(null, index);
+            IRemoteDevice[] devices = RemAL.getDevices();
+            ITile tile = RemAL.createTile(devices.length > 0 ? devices[0] : null, index);
             RemAL.saveTile(tile);
 
             rowView.removeViewAt(relativeIndex);
@@ -319,6 +361,30 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             intent.putExtra(TileOptions.TO_EXTRA, tile);
 
             startActivity(intent);
+        });
+
+        view.setOnDragListener((v, e) -> {
+            switch(e.getAction()) {
+                case DragEvent.ACTION_DROP:
+                    int index = Integer.valueOf(e.getClipData().getItemAt(0).getText().toString());
+
+                    int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
+                    int row = index / columns;
+                    int column = index % columns;
+                    TableRow originalRow = (TableRow)appTable.getChildAt(row);
+                    originalRow.removeViewAt(column);
+                    originalRow.addView(createPlaceholderView(), column);
+
+                    TableRow rowView = (TableRow)v.getParent();
+                    int relativeIndex = rowView.indexOfChild(v);
+                    rowView.removeViewAt(relativeIndex);
+                    rowView.addView(createTileButton(RemAL.getTile(index)), relativeIndex);
+
+                    v.invalidate();
+                    break;
+            }
+
+            return true;
         });
 
         return view;

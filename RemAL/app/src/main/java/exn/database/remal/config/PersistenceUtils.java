@@ -11,7 +11,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-import exn.database.remal.Deck;
 import exn.database.remal.core.RemAL;
 import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.devices.RemoteMultiDevice;
@@ -47,11 +46,11 @@ public class PersistenceUtils {
     }
 
     public static void saveTile(ITile tile) throws JSONException {
-        saveValue(PATH_TILES + "." + tile.getIndex(), tile.save());
+        saveValue(PATH_TILES + "." + tile.getPosition(), tile.save());
     }
 
     public static void removeTile(ITile tile) {
-        removeValue(PATH_TILES + "." + tile.getIndex());
+        removeValue(PATH_TILES + "." + tile.getPosition());
     }
 
     public static void addToDevicePath(IRemoteDevice device) throws JSONException {

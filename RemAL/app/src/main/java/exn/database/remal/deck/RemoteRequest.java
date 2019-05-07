@@ -7,7 +7,7 @@ import exn.database.remal.core.RemAL;
 import exn.database.remal.devices.IRemoteDevice;
 
 public class RemoteRequest implements IRemoteRequest {
-    private IRemoteDevice target;
+    protected IRemoteDevice target;
     protected String request;
 
     public RemoteRequest(IRemoteDevice device) {
