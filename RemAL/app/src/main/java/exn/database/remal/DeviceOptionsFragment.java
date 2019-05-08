@@ -1,6 +1,7 @@
 package exn.database.remal;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v14.preference.SwitchPreference;
 import android.support.v7.preference.EditTextPreference;
 import android.support.v7.preference.ListPreference;
@@ -17,7 +18,6 @@ import exn.database.remal.devices.SubDevicePack;
 
 public class DeviceOptionsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickListener {
     private RemoteMultiDevice device;
-    private volatile boolean isListPopulating;
 
     public void setDevice(RemoteMultiDevice device) {
         this.device = device;
@@ -38,7 +38,49 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
             pref.setOnPreferenceChangeListener(this);
             pref.setOnPreferenceClickListener(this);
         }
+
+        lanDevicesHandler.post(lanDevicesRunnable);
     }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        lanDevicesHandler.removeCallbacksAndMessages(null);
+    }
+
+    private String[] lanAddressStrings;
+    private String[] lanAddressDescriptions;
+    private final Handler lanDevicesHandler = new Handler();
+    private final Runnable lanDevicesRunnable = new Runnable() {
+        public void run() {
+            if(device.getPack(MultiDeviceMode.LAN).isEnabled()) {
+                device.getSubDevice(RemoteLanDevice.class).findDevices(packs -> {
+                    int length = packs.length;
+
+                    if(length > 0) {
+                        lanAddressStrings = new String[length];
+                        lanAddressDescriptions = new String[length];
+
+                        for(int i = 0; i < length; i++) {
+                            String address = packs[i].packet.getAddress().getHostAddress();
+
+                            lanAddressStrings[i] = address;
+                            lanAddressDescriptions[i] = packs[i].packet.getAddress().getHostName() + " | " + address;
+                        }
+                    } else {
+                        lanAddressStrings = new String[]{""};
+                        lanAddressDescriptions = new String[]{"None found"};
+                    }
+
+                    lanDevicesHandler.postDelayed(this, 200);
+                });
+            } else {
+				lanAddressStrings = new String[]{""};
+				lanAddressDescriptions = new String[]{"None found"};
+			}
+        }
+    };
 
     private void initPreference(Preference pref) {
         switch(pref.getKey()) {
@@ -174,38 +216,8 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                 break;
             case "lan_device_list": {
                 ListPreference p = (ListPreference)pref;
-                RemoteLanDevice d = device.getSubDevice(RemoteLanDevice.class);
-
-                isListPopulating = true;
-
-                d.findDevices(packs -> {
-                    int length = packs.length;
-
-                    System.out.println("Found: " + length);
-
-                    if(length > 0) {
-                        String[] addressStrings = new String[length];
-                        String[] addressDescriptions = new String[length];
-
-                        for(int i = 0; i < length; i++) {
-                            String address = packs[i].packet.getAddress().getHostAddress();
-
-                            addressStrings[i] = address;
-                            addressDescriptions[i] = packs[i].packet.getAddress().getHostName() + " | " + address;
-                        }
-
-                        p.setEntries(addressDescriptions);
-                        p.setEntryValues(addressStrings);
-                    } else {
-                        p.setEntries(new String[]{"None found"});
-                        p.setEntryValues(new String[]{""});
-                    }
-
-                    isListPopulating = false;
-                });
-
-                while(isListPopulating);
-
+                p.setEntries(lanAddressDescriptions);
+                p.setEntryValues(lanAddressStrings);
                 break;
             }
             case "bt_enabled":{
