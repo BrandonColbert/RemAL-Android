@@ -98,14 +98,6 @@ public class PersistenceUtils {
      * Loads saved devices and requests
      */
     public static IRemoteDevice[] loadDevices() {
-        //preferences.edit().clear().apply();
-        /*
-        System.out.println("PRINTING PREFS");
-        for(Map.Entry<String, ?> entry : preferences.getAll().entrySet())
-            System.out.println("Prefs: " + entry.getValue().toString());
-        System.out.println("DONE PRINTING PREFS");
-        */
-
         JSONArray savedDevices = null;
 
         try {

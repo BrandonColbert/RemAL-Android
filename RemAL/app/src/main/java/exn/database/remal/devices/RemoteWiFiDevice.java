@@ -21,9 +21,9 @@ import exn.database.remal.deck.ActionValidCallback;
  */
 public class RemoteWiFiDevice extends RemoteDevice {
     private static final String HANDSHAKE = "REMAL_HANDSHAKE",
-                                ACTION_VALID = "REMAL_ACTION_VALID",
-                                ACTION_INVALID = "REMAL_ACTION_INVALID",
-                                REMAL_DC = "REMAL_DISCONNECT";
+            ACTION_VALID = "REMAL_ACTION_VALID",
+            ACTION_INVALID = "REMAL_ACTION_INVALID",
+            REMAL_DC = "REMAL_DISCONNECT";
     private static final int DEFAULT_WIFI_PORT = 24545;
 
     private boolean connected;
@@ -87,6 +87,8 @@ public class RemoteWiFiDevice extends RemoteDevice {
     }
 
     public void connect(ActionValidCallback callback) {
+        disconnect();
+
         isConnecting = true;
 
         if(address.isEmpty()) {

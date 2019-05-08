@@ -4,6 +4,13 @@
     tools:context="exn.database.remal.EditDevices">
 
     <item
+        android:id="@+id/reconnect_all_devices"
+        android:icon="@drawable/ic_baseline_sync_24px"
+        android:title="@string/reconnect_all"
+        app:showAsAction="ifRoom">
+    </item>
+
+    <item
         android:id="@+id/add_device"
         android:icon="@drawable/ic_baseline_add_circle_outline_24px"
         android:title="@string/add_device"

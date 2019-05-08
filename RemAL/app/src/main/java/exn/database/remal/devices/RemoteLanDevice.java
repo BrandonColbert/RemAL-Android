@@ -6,17 +6,31 @@ import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import exn.database.remal.core.RemAL;
+
 public class RemoteLanDevice extends RemoteWiFiDevice {
-    public interface LanDeviceCallback {
-        void run(InetAddress[] addresses);
+    public class LanDeviceDiscoveryPack {
+        public final DatagramPacket packet;
+        public final byte[] data;
+
+        public LanDeviceDiscoveryPack(DatagramPacket packet, byte[] data) {
+            this.packet = packet;
+            this.data = data;
+        }
     }
 
-    private static final byte[] DETECT_BYTES = "REMAL_DETECT".getBytes();
+    public interface LanDeviceCallback {
+        void run(LanDeviceDiscoveryPack[] discoveries);
+    }
+
+    private static final String DETECT_STRING = "REMAL_DETECT";
+    private static final byte[] DETECT_BYTES = DETECT_STRING.getBytes();
 
     private boolean isSearching;
 
@@ -71,21 +85,23 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
             }
 
             Thread findThread = new Thread(() -> {
-                List<InetAddress> devices = new ArrayList<>();
+                List<LanDeviceDiscoveryPack> devices = new ArrayList<>();
 
                 while(isSearching) {
-                    byte[] buffer = new byte[15000];
+                    byte[] buffer = new byte[DETECT_BYTES.length];
                     DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
                     try {
                         socket.receive(packet);
-                        devices.add(packet.getAddress());
+
+                        if(new String(buffer).equals(DETECT_STRING))
+                            devices.add(new LanDeviceDiscoveryPack(packet, buffer));
                     } catch(Exception e) {
                         e.printStackTrace();
                     }
                 }
 
-                callback.run(devices.toArray(new InetAddress[0]));
+                callback.run(devices.toArray(new LanDeviceDiscoveryPack[0]));
             });
 
             findThread.start();

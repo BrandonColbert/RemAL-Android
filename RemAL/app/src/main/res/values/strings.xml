@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">RemAL</string>
     <string name="edit_layout">Edit Layout</string>
-    <string name="title_activity_edit_devices"/>
+    <string name="title_activity_edit_devices">Edit Devices</string>
     <string name="add_device">Add Device</string>
     <string name="edit_devices">Manage Devices</string>
     <string name="title_activity_device_options"/>
@@ -9,7 +9,8 @@
     <string name="reconnect">Reconnect</string>
     <string name="disconnect">Disconnect</string>
     <string name="edit_settings">Edit Settings</string>
-    <string name="title_activity_deck_settings"/>
-    <string name="title_activity_tile_options"/>
+    <string name="title_activity_deck_settings">Deck Options</string>
+    <string name="title_activity_tile_options">Edit Tile</string>
     <string name="delete_tile">Delete tile</string>
+    <string name="reconnect_all">Reconnect all</string>
 </resources>

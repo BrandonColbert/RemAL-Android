@@ -13,4 +13,24 @@
         android:title="Columns"
         android:dialogLayout="@layout/layout_edit_text_number"/>
 
+    <EditTextPreference
+        android:key="color_deck_background"
+        android:title="Background Color"
+        android:dialogLayout="@layout/layout_edit_text_color_code"/>
+
+    <EditTextPreference
+        android:key="color_deck_tile"
+        android:title="Tile Color"
+        android:dialogLayout="@layout/layout_edit_text_color_code"/>
+
+    <EditTextPreference
+        android:key="color_deck_text"
+        android:title="Text Color"
+        android:dialogLayout="@layout/layout_edit_text_color_code"/>
+
+    <Preference
+        android:key="deck_colors_reset"
+        android:title="Reset Colors"
+        android:summary="Resets the background and tile colors" />
+
 </PreferenceScreen>

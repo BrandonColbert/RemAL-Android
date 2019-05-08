@@ -9,5 +9,6 @@
         android:layout_height="match_parent"
         android:inputType="number"
         android:singleLine="true"
-        android:maxLength="5"/>
+        android:maxLength="5"
+        android:selectAllOnFocus="true"/>
 </LinearLayout>

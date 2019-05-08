@@ -31,9 +31,9 @@ public class RemoteMultiDevice extends RemoteDevice {
 
         register(MultiDeviceMode.USB, RemoteUSBDevice.class, new SubDevicePack(new RemoteUSBDevice(name), 0));
         register(MultiDeviceMode.LAN, RemoteLanDevice.class, new SubDevicePack(new RemoteLanDevice(name), 1));
-        register(MultiDeviceMode.BLUETOOTH, RemoteBluetoothDevice.class, new SubDevicePack(new RemoteBluetoothDevice(name), 2));
-        register(MultiDeviceMode.WIFI, RemoteWiFiDevice.class, new SubDevicePack(new RemoteWiFiDevice(name), 3));
-        register(MultiDeviceMode.SSH, RemoteSSHDevice.class, new SubDevicePack(new RemoteSSHDevice(name), 4));
+        register(MultiDeviceMode.BLUETOOTH, RemoteBluetoothDevice.class, new SubDevicePack(new RemoteBluetoothDevice(name), 2, false));
+        register(MultiDeviceMode.WIFI, RemoteWiFiDevice.class, new SubDevicePack(new RemoteWiFiDevice(name), 3, false));
+        register(MultiDeviceMode.SSH, RemoteSSHDevice.class, new SubDevicePack(new RemoteSSHDevice(name), 4, false));
     }
 
     public RemoteMultiDevice() {

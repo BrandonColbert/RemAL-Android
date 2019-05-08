@@ -3,11 +3,12 @@ package exn.database.remal;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -22,8 +23,6 @@ import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 
-import java.util.Map;
-
 import exn.database.remal.config.PersistenceUtils;
 import exn.database.remal.core.IRemalEventListener;
 import exn.database.remal.core.RemAL;
@@ -31,19 +30,18 @@ import exn.database.remal.core.RemalEvent;
 import exn.database.remal.deck.ITile;
 import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.events.ColumnAmountChangedEvent;
+import exn.database.remal.events.DeckColorChangedEvent;
 import exn.database.remal.events.TileChangedEvent;
 import exn.database.remal.events.TileDestroyedEvent;
 import exn.database.remal.ui.SquareView;
 import exn.database.remal.ui.TileButton;
 
 public class Deck extends AppCompatActivity implements IRemalEventListener {
-    public static final int DEFAULT_COLUMNS = 3, MAX_TILES = 100;
-
-    private boolean isFullscreen;
+    public static final int DEFAULT_COLUMNS = 3, MAX_TILES = 111;
     private TableLayout appTable;
-    private Toolbar toolbar;
-    private boolean isEditing;
-    private int scrollDirection, scrollSpeedModifier;
+    private View hoverView;
+    private boolean isEditing, isFullscreen;
+    private int scrollDirection, scrollSpeedModifier, tileEditColor, tileColor, tilePlaceholderColor, textColor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +50,8 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
         PersistenceUtils.loadPreferences(this);
         RemAL.setMainActivity(this);
-        RemAL.loadAndConnectDevices();
+        RemAL.loadDevices();
+        RemAL.connectAllDevices();
 
         //TODO: Remove
         //PersistenceUtils.getPreferences().edit().clear().apply();
@@ -62,28 +61,18 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
         */
 
         appTable = findViewById(R.id.app_table);
-        toolbar = findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        toggleFullscreen(true);
+        toggleFullscreen(RemAL.getDevices().length != 0);
 
         appTable.setOnClickListener(view -> {
             if(isFullscreen)
                 toggleFullscreen(true);
         });
 
-        int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
-        updateView(columns);
-
-        TableRow lastRow = ((TableRow)appTable.getChildAt(appTable.getChildCount() - 1));
-        for(int i = 0; i < MAX_TILES; i++) {
-            ITile tile = RemAL.getTile(i);
-
-            if(tile != null)
-                lastRow.addView(createTileButton(tile));
-        }
-
-        updateView(columns);
+        updateView(Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS))));
+        updateDeckColors();
         toggleEditMode(false);
 
         RemAL.register(this);
@@ -143,6 +132,11 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             TableRow tableRow = (TableRow)appTable.getChildAt(index / columns);
             tableRow.removeViewAt(column);
             tableRow.addView(createPlaceholderView(), column);
+        } else if(event instanceof DeckColorChangedEvent) {
+            if(((DeckColorChangedEvent)event).didReset)
+                resetDeckColors();
+            else
+                updateDeckColors();
         }
     }
 
@@ -168,6 +162,8 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
         //Handle upwards scrolling
         findViewById(R.id.deckScrollTop).setOnDragListener((v, e) -> {
+            int action = e.getAction();
+
             switch(e.getAction()) {
                 case DragEvent.ACTION_DRAG_ENTERED:
                     //Start scrolling
@@ -185,29 +181,20 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                     scrollSpeedModifier = 1;
                     scrollHandler.removeCallbacks(scrollRun);
                     break;
-                case DragEvent.ACTION_DROP:
-                    //Pass to scroll view since this view shouldn't use the drop event
-                    //deckScroll.dispatchDragEvent(e);
+            }
 
-                    for(int i = 0; i < deckScroll.getChildCount(); i++) {
-                        Rect hit = new Rect();
-                        View sub = appTable.getChildAt(i);
-                        sub.getHitRect(hit);
+            if(action == DragEvent.ACTION_DROP || action == DragEvent.ACTION_DRAG_ENTERED || action == DragEvent.ACTION_DRAG_LOCATION) {
+                //Find the row which uses the event
+                for(int i = 0; i < appTable.getChildCount(); i++) {
+                    Rect bounds = new Rect();
+                    View sub = appTable.getChildAt(i);
+                    sub.getHitRect(bounds);
 
-                        int x = Math.round(v.getX() + e.getX());
-                        int y = Math.round(v.getY() + e.getY());
-
-                        RemAL.log("Looking: " + x + ", " + y);
-
-                        if(hit.contains(x, y)) {
-                            RemAL.log("Hit row: " + appTable.indexOfChild(sub));
-
-
-                            sub.dispatchDragEvent(e);
-                        }
+                    if(bounds.contains(Math.round(e.getX() + deckScroll.getScrollX()), Math.round(e.getY() + deckScroll.getScrollY()))) {
+                        sub.dispatchDragEvent(e);
+                        break;
                     }
-
-                    break;
+                }
             }
 
             return true;
@@ -215,7 +202,9 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
         //Handle downwards scrolling
         findViewById(R.id.deckScrollBottom).setOnDragListener((v, e) -> {
-            switch(e.getAction()) {
+            int action = e.getAction();
+
+            switch(action) {
                 case DragEvent.ACTION_DRAG_ENTERED:
                     scrollDirection = 1;
                     scrollHandler.removeCallbacks(scrollRun);
@@ -229,9 +218,19 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                     scrollSpeedModifier = 1;
                     scrollHandler.removeCallbacks(scrollRun);
                     break;
-                case DragEvent.ACTION_DROP:
-                    deckScroll.dispatchDragEvent(e);
-                    break;
+            }
+
+            if(action == DragEvent.ACTION_DROP || action == DragEvent.ACTION_DRAG_ENTERED || action == DragEvent.ACTION_DRAG_LOCATION) {
+                for(int i = 0; i < appTable.getChildCount(); i++) {
+                    Rect bounds = new Rect();
+                    View sub = appTable.getChildAt(i);
+                    sub.getHitRect(bounds);
+
+                    if(bounds.contains(Math.round(e.getX() + deckScroll.getScrollX()), Math.round(v.getY() - v.getHeight() + e.getY() + deckScroll.getScrollY()))) {
+                        sub.dispatchDragEvent(e);
+                        break;
+                    }
+                }
             }
 
             return true;
@@ -287,8 +286,12 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             for(int j = 0; j < count; j++) {
                 View v = row.getChildAt(j);
 
-                if(v instanceof SquareView)
+                if(v instanceof SquareView) {
                     v.setVisibility(value ? View.VISIBLE : (anyTilesVisibleYet ? View.INVISIBLE : View.GONE));
+                } else if(v instanceof TileButton) {
+                    v.getBackground().mutate().setColorFilter(value ? tileEditColor : tileColor, PorterDuff.Mode.SRC_IN);
+					v.invalidate();
+                }
             }
         }
     }
@@ -298,68 +301,63 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
      * @param columns Number of columns in the app table
      */
     private void updateView(int columns) {
-        //Add placeholder views to fill in missing tiles
-        for(int i = 0; i < MAX_TILES / columns; i++) {
-            TableRow row = (TableRow)appTable.getChildAt(i);
+        final int rows = (int)Math.ceil((double)MAX_TILES / (double)columns);
 
-            if(row == null) {
-                row = new TableRow(this);
+        int atCount;
+        while((atCount = appTable.getChildCount()) > rows)
+            appTable.removeViewAt(atCount - 1);
+
+        loop:for(int i = 0; i < rows; i++) {
+            TableRow rowView = (TableRow)appTable.getChildAt(i);
+
+            //Create new row if missing
+            if(rowView == null) {
+                rowView = new TableRow(this);
 
                 TableRow.LayoutParams params = new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT);
                 params.gravity = Gravity.CENTER;
-                row.setLayoutParams(params);
+                rowView.setLayoutParams(params);
 
-                appTable.addView(row);
+                appTable.addView(rowView);
             }
 
-            //Add placeholder views if lacking
-            while(row.getChildCount() < columns)
-                row.addView(createPlaceholderView());
-        }
+            rowView.setWeightSum(columns);
 
-        //Reposition DeckTiles based on index
-        for(int i = 0; i < appTable.getChildCount(); i++) {
-            TableRow rowView = (TableRow)appTable.getChildAt(i);
+            //Reposition tiles based on index
+            for(int j = 0; j < columns; j++) {
+                int index = i * columns + j;
 
-            for(int j = 0; j < rowView.getChildCount(); j++) {
+                if(index >= MAX_TILES)
+                    break loop;
+
                 View view = rowView.getChildAt(j);
+                ITile tile = RemAL.getTile(index);
 
-                if(view instanceof TileButton) {
-                    TileButton button = (TileButton)view;
-
-                    int index = button.getTile().getPosition();
-
-                    int row = index / columns;
-                    int column = index % columns;
-
-                    if(i == row) {
-                        if(j != column) {
-                            rowView.removeViewAt(j);
-                            rowView.addView(button, column);
-
-                            j = 0;
-                        }
+                if(tile != null) {
+                    if(view instanceof TileButton) {
+                        ((TileButton)view).setTile(tile);
                     } else {
-                        TableRow otherRow = (TableRow)appTable.getChildAt(row);
+                        if(view != null)
+                            rowView.removeViewAt(j);
 
-                        rowView.removeViewAt(j);
-                        otherRow.addView(button, column);
-
-                        j = 0;
+                        rowView.addView(createTileButton(tile), j);
                     }
+                } else if(view instanceof TileButton) {
+                    rowView.removeViewAt(j);
+                    rowView.addView(createPlaceholderView(), j);
+                } else if(view == null) {
+                    rowView.addView(createPlaceholderView(), j);
                 }
             }
+
+            int count;
+            while((count = rowView.getChildCount()) > columns)
+                rowView.removeViewAt(count - 1);
         }
 
-        //Remove excess views
-        for(int i = 0; i < appTable.getChildCount(); i++) {
-            TableRow row = (TableRow)appTable.getChildAt(i);
-
-            //Remove placeholder from end
-            int rowElements;
-            while((rowElements = row.getChildCount()) > columns)
-                row.removeViewAt(rowElements - 1);
-        }
+        int count;
+        while((count = appTable.getChildCount()) > rows)
+            appTable.removeViewAt(count - 1);
     }
 
     /**
@@ -368,8 +366,11 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
      */
     private TileButton createTileButton(ITile tile) {
         TileButton button = new TileButton(this);
-        button.setTextColor(getResources().getColor(R.color.colorAltText));
+        button.setTextColor(textColor);
         button.setTile(tile);
+
+        button.getBackground().mutate().setColorFilter(isEditing ? tileEditColor : tileColor, PorterDuff.Mode.SRC_IN);
+        button.invalidate();
 
         TableRow.LayoutParams params = new TableRow.LayoutParams(0, 0, 1f);
         params.setMargins(5, 5, 5, 5);
@@ -428,6 +429,15 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
                     RemAL.post(new TileChangedEvent(movedTile));
                     RemAL.post(new TileChangedEvent(staticTile));
+
+                    setHoverView(null);
+                    break;
+                case DragEvent.ACTION_DRAG_ENTERED: case DragEvent.ACTION_DRAG_LOCATION:
+                    setHoverView(v);
+                    break;
+                case DragEvent.ACTION_DRAG_ENDED: case DragEvent.ACTION_DRAG_EXITED:
+					v.getBackground().mutate().setColorFilter(tileEditColor, PorterDuff.Mode.SRC_IN);
+					v.invalidate();
                     break;
             }
 
@@ -442,8 +452,11 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
      */
     private SquareView createPlaceholderView() {
         SquareView view = new SquareView(this);
-        view.setBackground(getResources().getDrawable(R.drawable.ic_baseline_crop_free_24px));
+        view.setBackground(getResources().getDrawable(R.drawable.ic_baseline_border_clear_24px));
         view.setVisibility(isEditing ? View.VISIBLE : View.INVISIBLE);
+
+        view.getBackground().mutate().setColorFilter(tilePlaceholderColor, PorterDuff.Mode.SRC_IN);
+        view.invalidate();
 
         TableRow.LayoutParams params = new TableRow.LayoutParams(0, 0, 1f);
         params.setMargins(5, 5, 5, 5);
@@ -497,6 +510,15 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                         rowView.removeViewAt(relativeIndex);
                         rowView.addView(createTileButton(movedTile), relativeIndex);
                     }
+
+                    setHoverView(null);
+                    break;
+                case DragEvent.ACTION_DRAG_ENTERED: case DragEvent.ACTION_DRAG_LOCATION:
+                    setHoverView(v);
+                    break;
+                case DragEvent.ACTION_DRAG_ENDED: case DragEvent.ACTION_DRAG_EXITED:
+					v.getBackground().mutate().setColorFilter(tilePlaceholderColor, PorterDuff.Mode.SRC_IN);
+					v.invalidate();
                     break;
             }
 
@@ -504,5 +526,73 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
         });
 
         return view;
+    }
+
+    /**
+     * Sets the view being hovered over
+     * @param v View being hovered over
+     */
+    private void setHoverView(View v) {
+        if(hoverView != null) {
+            hoverView.getBackground().mutate().setColorFilter((hoverView instanceof TileButton) ? tileEditColor : tilePlaceholderColor, PorterDuff.Mode.SRC_IN);
+            hoverView.invalidate();
+        }
+
+        if((hoverView = v) != null) {
+            v.getBackground().mutate().setColorFilter(Color.TRANSPARENT, PorterDuff.Mode.SRC_IN);
+            v.invalidate();
+        }
+    }
+
+    /**
+     * Resets the colors of the deck to their original
+     */
+    private void resetDeckColors() {
+        PersistenceUtils.saveValue("color_deck_background", RemAL.convertColorToCode(getResources().getColor(R.color.colorPrimaryDark)));
+        PersistenceUtils.saveValue("color_deck_tile", RemAL.convertColorToCode(getResources().getColor(R.color.colorAccent)));
+        PersistenceUtils.saveValue("color_deck_text", RemAL.convertColorToCode(getResources().getColor(R.color.colorAltText)));
+
+        updateDeckColors();
+    }
+
+    /**
+     * Updates the colors currently viewed on the deck
+     */
+    private void updateDeckColors() {
+        findViewById(R.id.deckScroll).setBackgroundColor(Color.parseColor(PersistenceUtils.loadValue("color_deck_background", RemAL.convertColorToCode(getResources().getColor(R.color.colorPrimaryDark)))));
+
+        textColor = Color.parseColor(PersistenceUtils.loadValue("color_deck_text", RemAL.convertColorToCode(getResources().getColor(R.color.colorAltText))));
+        tileColor = Color.parseColor(PersistenceUtils.loadValue("color_deck_tile", RemAL.convertColorToCode(getResources().getColor(R.color.colorAccent))));
+
+        final int colorDelta = 50, r = Color.red(tileColor), g = Color.green(tileColor), b = Color.blue(tileColor);
+
+        tileEditColor = Color.argb(
+                50,
+                Math.min(255, r + colorDelta),
+                Math.min(255, g + colorDelta),
+                Math.min(255, b + colorDelta)
+        );
+
+        tilePlaceholderColor = Color.rgb(
+                Math.min(255, r + colorDelta),
+                Math.min(255, g + colorDelta),
+                Math.min(255, b + colorDelta)
+        );
+
+        for(int i = appTable.getChildCount() - 1; i >= 0; i--) {
+            TableRow row = (TableRow)appTable.getChildAt(i);
+            int count = row.getChildCount();
+
+            for(int j = 0; j < count; j++) {
+                View v = row.getChildAt(j);
+
+                boolean isButton = v instanceof TileButton;
+                if(isButton)
+                    ((TileButton)v).setTextColor(textColor);
+
+                v.getBackground().mutate().setColorFilter(isButton ? tileColor : tilePlaceholderColor, PorterDuff.Mode.SRC_IN);
+                v.invalidate();
+            }
+        }
     }
 }

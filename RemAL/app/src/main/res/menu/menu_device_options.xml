@@ -12,7 +12,7 @@
 
     <item
         android:id="@+id/device_disconnect"
-        android:icon="@drawable/ic_baseline_clear_24px"
+        android:icon="@drawable/ic_baseline_not_interested_24px"
         android:title="@string/disconnect"
         app:showAsAction="ifRoom">
     </item>

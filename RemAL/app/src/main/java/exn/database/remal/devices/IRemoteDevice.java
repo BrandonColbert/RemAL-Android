@@ -8,6 +8,16 @@ import exn.database.remal.deck.ActionValidCallback;
  */
 public interface IRemoteDevice extends IPersistent {
     /**
+     * @return The order of the device for selection and appearance
+     */
+    int getOrder();
+
+    /**
+     * Sets the order of the device for selection and appearance
+     */
+    void setOrder(int order);
+
+    /**
      * @return True if this device is connected, false otherwise
      */
     boolean isConnected();

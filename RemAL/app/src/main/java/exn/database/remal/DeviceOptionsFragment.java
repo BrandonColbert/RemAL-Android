@@ -178,18 +178,23 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
                 isListPopulating = true;
 
-                d.findDevices(addresses -> {
-                    int length = addresses.length;
+                d.findDevices(packs -> {
+                    int length = packs.length;
 
                     System.out.println("Found: " + length);
 
                     if(length > 0) {
                         String[] addressStrings = new String[length];
+                        String[] addressDescriptions = new String[length];
 
-                        for (int i = 0; i < length; i++)
-                            addressStrings[i] = addresses[i].getHostAddress();
+                        for(int i = 0; i < length; i++) {
+                            String address = packs[i].packet.getAddress().getHostAddress();
 
-                        p.setEntries(addressStrings);
+                            addressStrings[i] = address;
+                            addressDescriptions[i] = packs[i].packet.getAddress().getHostName() + " | " + address;
+                        }
+
+                        p.setEntries(addressDescriptions);
                         p.setEntryValues(addressStrings);
                     } else {
                         p.setEntries(new String[]{"None found"});

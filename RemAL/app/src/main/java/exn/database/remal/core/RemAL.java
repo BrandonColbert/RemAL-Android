@@ -38,8 +38,12 @@ public final class RemAL {
         RemAL.activity = activity;
     }
 
-    public static Activity getMainActivity() {
-        return activity;
+    /**
+     * @param color Color to convert
+     * @return The color as a 6 character hexidecimal string
+     */
+    public static String convertColorToCode(int color) {
+        return String.format("#%06X", 0xffffff & color);
     }
 
     /**
@@ -87,22 +91,28 @@ public final class RemAL {
         post(new TileDestroyedEvent(tile));
     }
 
+	/**
+	 * Loads the saved devices
+	 */
+	public static void loadDevices() {
+		for(IRemoteDevice device : PersistenceUtils.loadDevices())
+			devices.put(device.getName(), device);
+	}
+
     /**
-     * Loads and connects to the saved devices
+     * Connects to all the devices
      */
-    public static void loadAndConnectDevices() {
-        for(IRemoteDevice device : PersistenceUtils.loadDevices()) {
-            devices.put(device.getName(), device);
+    public static void connectAllDevices() {
+        for(IRemoteDevice device : getDevices())
             device.connect(valid -> {});
-        }
     }
 
     /**
-     * @return An array of all the devices sorted by name
+     * @return An array of all the devices sorted by order
      */
     public static IRemoteDevice[] getDevices() {
         List<IRemoteDevice> sortedDevices = new ArrayList<>(devices.values());
-        Collections.sort(sortedDevices, (lhs, rhs) -> lhs.getName().compareTo(rhs.getName()));
+        Collections.sort(sortedDevices, (lhs, rhs) -> Integer.compare(lhs.getOrder(), rhs.getOrder()));
 
         return sortedDevices.toArray(new IRemoteDevice[0]);
     }
@@ -228,9 +238,7 @@ public final class RemAL {
      * @param event Event to post
      */
     public static void post(RemalEvent event) {
-        IRemalEventListener[] arr = listeners.toArray(new IRemalEventListener[0]);
-
-        for(IRemalEventListener listener : arr)
+        for(IRemalEventListener listener : listeners.toArray(new IRemalEventListener[0]))
             listener.onRemalEvent(event);
     }
 }
