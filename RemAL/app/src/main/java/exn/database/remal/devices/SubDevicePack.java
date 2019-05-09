@@ -37,6 +37,10 @@ public class SubDevicePack {
      */
     public void setEnabled(boolean value) {
         enabled = value;
+
+        if(!value)
+            device.disconnect();
+
         RemAL.post(new DeviceConfigChangedEvent(device));
     }
 

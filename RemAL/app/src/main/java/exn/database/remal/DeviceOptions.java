@@ -6,13 +6,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Toast;
 
 import exn.database.remal.core.IRemalEventListener;
 import exn.database.remal.core.RemAL;
 import exn.database.remal.core.RemalEvent;
 import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.devices.RemoteMultiDevice;
+import exn.database.remal.events.DeviceConnectEvent;
+import exn.database.remal.events.DeviceDisconnectEvent;
+import exn.database.remal.events.DeviceEvent;
 import exn.database.remal.events.DeviceRenamedEvent;
 
 public class DeviceOptions  extends AppCompatActivity implements IRemalEventListener {
@@ -52,11 +54,11 @@ public class DeviceOptions  extends AppCompatActivity implements IRemalEventList
 
     @Override
     public void onRemalEvent(RemalEvent event) {
-        if(event instanceof DeviceRenamedEvent) {
-            DeviceRenamedEvent e = (DeviceRenamedEvent)event;
+        if(event instanceof DeviceRenamedEvent || event instanceof DeviceConnectEvent || event instanceof DeviceDisconnectEvent) {
+            DeviceEvent e = (DeviceEvent)event;
 
-            if(e.device == device)
-                updateTitle();
+            if(e.device.getName().equals(device.getName()))
+                runOnUiThread(this::updateTitle);
         }
     }
 
@@ -97,7 +99,7 @@ public class DeviceOptions  extends AppCompatActivity implements IRemalEventList
 
             name.append(device.getName());
             name.append(": ");
-            name.append(device.getConnectionDescription());
+            name.append(device.getConnectionName());
 
             bar.setTitle(name);
         }

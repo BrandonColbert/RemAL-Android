@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
 
 import exn.database.remal.core.RemAL;
 import exn.database.remal.events.DeviceConfigChangedEvent;
@@ -114,11 +116,20 @@ public class RemoteWiFiDevice extends RemoteDevice {
         if(didInit) {
             //Start listener
             wifiThread = new Thread(() -> {
-                String input = "";
-
                 do {
+                    String input = null;
+
+                    try {
+                        input = reader.readLine();
+                    } catch(SocketException e) {
+                        if(!socket.isConnected())
+                            disconnect();
+                    } catch(IOException e) {
+                        e.printStackTrace();
+                    }
+
                     if(input != null) {
-                        switch (input) {
+                        switch(input) {
                             case HANDSHAKE:
                                 connected = true;
                                 callback.run(true);
@@ -141,22 +152,12 @@ public class RemoteWiFiDevice extends RemoteDevice {
                                 break;
                         }
                     }
-
-                    try {
-                        input = reader.readLine();
-                    } catch(Exception e) {
-                        e.printStackTrace();
-                    }
                 } while(connected && !Thread.currentThread().isInterrupted());
             });
 
             wifiThread.start();
 
-            try {
-                writer.write(HANDSHAKE);
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
+            sendRequest(HANDSHAKE, valid -> {});
         } else {
             isConnecting = false;
             callback.run(false);
@@ -169,8 +170,14 @@ public class RemoteWiFiDevice extends RemoteDevice {
 
         lastActionCallback = callback;
 
+        RemAL.log("Sending request: " + request);
+
         try {
+            byte[] data = request.getBytes();
+
+            socket.getOutputStream().write(ByteBuffer.allocate(4).putInt(data.length).array());
             writer.write(request);
+            writer.flush();
         } catch(Exception e) {
             e.printStackTrace();
         }

@@ -106,4 +106,10 @@ public class DeckTile extends RemoteRequest implements ITile {
         index = parcel.readInt();
         name = parcel.readString();
     }
+
+    //TODO: Remove
+    @Override
+    public String getRequest() {
+        return name;
+    }
 }

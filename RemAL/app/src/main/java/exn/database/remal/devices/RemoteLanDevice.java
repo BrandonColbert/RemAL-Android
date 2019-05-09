@@ -1,18 +1,17 @@
 package exn.database.remal.devices;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import exn.database.remal.core.RemAL;
 
 public class RemoteLanDevice extends RemoteWiFiDevice {
     public class LanDeviceDiscoveryPack {
@@ -96,7 +95,9 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
 
                         if(new String(buffer).equals(DETECT_STRING))
                             devices.add(new LanDeviceDiscoveryPack(packet, buffer));
-                    } catch(Exception e) {
+                    } catch(SocketException e) {
+
+                    } catch(IOException e) {
                         e.printStackTrace();
                     }
                 }

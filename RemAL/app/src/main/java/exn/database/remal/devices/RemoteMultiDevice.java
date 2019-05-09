@@ -82,6 +82,8 @@ public class RemoteMultiDevice extends RemoteDevice {
     public void disconnect() {
         if(currentMode != MultiDeviceMode.NONE)
             subdevices.get(currentMode).getDevice().disconnect();
+
+        currentMode = MultiDeviceMode.NONE;
     }
 
     public void sendRequest(String request, ActionValidCallback callback) {
@@ -128,8 +130,10 @@ public class RemoteMultiDevice extends RemoteDevice {
 
                     while(connectionWaiting);
 
-                    if(connectionResult)
+                    if(connectionResult) {
+                        currentMode = classmap.get(device.getClass());
                         break;
+                    }
                 }
             }
 
@@ -147,11 +151,11 @@ public class RemoteMultiDevice extends RemoteDevice {
     }
 
     public String getConnectionName() {
-        return currentMode != MultiDeviceMode.NONE ? subdevices.get(currentMode).getDevice().getConnectionName() : "Generic";
+        return isConnected() ? subdevices.get(currentMode).getDevice().getConnectionName() : "None";
     }
 
     public String getConnectionDescription() {
-        return currentMode != MultiDeviceMode.NONE ? subdevices.get(currentMode).getDevice().getConnectionDescription() : super.getConnectionDescription();
+        return isConnected() ? subdevices.get(currentMode).getDevice().getConnectionDescription() : super.getConnectionDescription();
     }
 
     /**

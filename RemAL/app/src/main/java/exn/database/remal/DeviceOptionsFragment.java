@@ -9,6 +9,9 @@ import android.support.v7.preference.Preference;
 import android.support.v7.preference.PreferenceFragmentCompat;
 import android.support.v7.preference.PreferenceScreen;
 
+import java.net.InetAddress;
+import java.util.HashMap;
+
 import exn.database.remal.core.RemAL;
 import exn.database.remal.devices.MultiDeviceMode;
 import exn.database.remal.devices.RemoteLanDevice;
@@ -17,7 +20,30 @@ import exn.database.remal.devices.RemoteWiFiDevice;
 import exn.database.remal.devices.SubDevicePack;
 
 public class DeviceOptionsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickListener {
+    private final Handler lanDevicesHandler = new Handler();
+    private final HashMap<String, String> lanAddresses = new HashMap<>();
     private RemoteMultiDevice device;
+    private boolean lanSearching;
+
+    private final Runnable lanCallback = new Runnable() {
+        public void run() {
+            if(device.getPack(MultiDeviceMode.LAN).isEnabled() && lanSearching) {
+                device.getSubDevice(RemoteLanDevice.class).findDevices(packs -> {
+                    lanAddresses.clear();
+
+                    for(RemoteLanDevice.LanDeviceDiscoveryPack pack : packs) {
+                        InetAddress ip = pack.packet.getAddress();
+                        String address = ip.getHostAddress();
+                        String desc = ip.getHostName() + "@" + address;
+
+                        lanAddresses.put(address, desc);
+                    }
+
+                    lanDevicesHandler.postDelayed(this, 1000);
+                });
+            }
+        }
+    };
 
     public void setDevice(RemoteMultiDevice device) {
         this.device = device;
@@ -39,48 +65,41 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
             pref.setOnPreferenceClickListener(this);
         }
 
-        lanDevicesHandler.post(lanDevicesRunnable);
+        enableLanSearch();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-
-        lanDevicesHandler.removeCallbacksAndMessages(null);
+        disableLanSearch();
     }
 
-    private String[] lanAddressStrings;
-    private String[] lanAddressDescriptions;
-    private final Handler lanDevicesHandler = new Handler();
-    private final Runnable lanDevicesRunnable = new Runnable() {
-        public void run() {
-            if(device.getPack(MultiDeviceMode.LAN).isEnabled()) {
-                device.getSubDevice(RemoteLanDevice.class).findDevices(packs -> {
-                    int length = packs.length;
+    @Override
+    public void onPause() {
+        super.onPause();
+        disableLanSearch();
+    }
 
-                    if(length > 0) {
-                        lanAddressStrings = new String[length];
-                        lanAddressDescriptions = new String[length];
+    @Override
+    public void onResume() {
+        super.onResume();
+        enableLanSearch();
+    }
 
-                        for(int i = 0; i < length; i++) {
-                            String address = packs[i].packet.getAddress().getHostAddress();
-
-                            lanAddressStrings[i] = address;
-                            lanAddressDescriptions[i] = packs[i].packet.getAddress().getHostName() + " | " + address;
-                        }
-                    } else {
-                        lanAddressStrings = new String[]{""};
-                        lanAddressDescriptions = new String[]{"None found"};
-                    }
-
-                    lanDevicesHandler.postDelayed(this, 200);
-                });
-            } else {
-				lanAddressStrings = new String[]{""};
-				lanAddressDescriptions = new String[]{"None found"};
-			}
+    private void enableLanSearch() {
+        if(!lanSearching) {
+            lanSearching = true;
+            lanDevicesHandler.post(lanCallback);
         }
-    };
+    }
+
+    private void disableLanSearch() {
+        if(lanSearching) {
+            lanSearching = false;
+            lanDevicesHandler.removeCallbacks(lanCallback);
+            lanAddresses.clear();
+        }
+    }
 
     private void initPreference(Preference pref) {
         switch(pref.getKey()) {
@@ -206,6 +225,11 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
                 ((SwitchPreference)pref).setChecked(pack.isEnabled());
 
+                if(pack.isEnabled())
+                    enableLanSearch();
+                else
+                    disableLanSearch();
+
                 break;
             }
             case "lan_port":
@@ -216,8 +240,14 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                 break;
             case "lan_device_list": {
                 ListPreference p = (ListPreference)pref;
-                p.setEntries(lanAddressDescriptions);
-                p.setEntryValues(lanAddressStrings);
+
+                if(lanAddresses.size() > 0) {
+                    p.setEntries(lanAddresses.values().toArray(new String[0]));
+                    p.setEntryValues(lanAddresses.keySet().toArray(new String[0]));
+                } else {
+                    p.setEntries(new String[]{"None found"});
+                    p.setEntryValues(new String[]{""});
+                }
                 break;
             }
             case "bt_enabled":{

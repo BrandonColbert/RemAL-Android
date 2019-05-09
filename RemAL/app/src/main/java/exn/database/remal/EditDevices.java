@@ -152,7 +152,7 @@ public class EditDevices extends AppCompatActivity implements IRemalEventListene
     @Override
     public void onRemalEvent(RemalEvent event) {
         if(event instanceof DeviceRenamedEvent || event instanceof DeviceConnectEvent || event instanceof DeviceDisconnectEvent)
-            adapter.notifyDataSetChanged();
+            runOnUiThread(adapter::notifyDataSetChanged);
         else if(event instanceof DeviceCreatedEvent)
             adapter.notifyItemInserted(((DeviceEvent)event).device.getOrder());
         else if(event instanceof DeviceDestroyedEvent)

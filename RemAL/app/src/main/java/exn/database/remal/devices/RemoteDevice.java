@@ -4,6 +4,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import exn.database.remal.core.RemAL;
+import exn.database.remal.deck.ActionValidCallback;
+import exn.database.remal.events.DeviceDisconnectEvent;
 
 public abstract class RemoteDevice implements IRemoteDevice {
     protected String name;

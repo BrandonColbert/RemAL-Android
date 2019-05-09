@@ -388,8 +388,6 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
                 button.getTile().send((valid) -> {});
             }
-
-
         });
 
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
