@@ -9,6 +9,7 @@ import android.view.MenuItem;
 
 import exn.database.remal.core.RemAL;
 import exn.database.remal.deck.ITile;
+import exn.database.remal.deck.TileLevelTracker;
 
 public class TileOptions extends AppCompatActivity {
     public static final String TO_EXTRA = "exn.database.remal.devices.TILE_OPTIONS_EXTRA";
@@ -46,6 +47,7 @@ public class TileOptions extends AppCompatActivity {
         switch(item.getItemId()) {
             case R.id.delete_tile:
                 RemAL.deleteTile(tile);
+                TileLevelTracker.notify(tile.getPosition(), false);
                 finish();
 
                 return true;

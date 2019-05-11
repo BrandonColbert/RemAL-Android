@@ -39,8 +39,8 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
                         lanAddresses.put(address, desc);
                     }
 
-                    lanDevicesHandler.postDelayed(this, 1000);
-                });
+                    lanDevicesHandler.post(this);
+                }, 1000);
             }
         }
     };

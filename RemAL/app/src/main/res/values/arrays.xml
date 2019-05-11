@@ -2,13 +2,15 @@
 <resources>
     <string-array name="tile_types">
         <item>App</item>
+        <item>Path</item>
         <item>Macro</item>
         <item>Command</item>
     </string-array>
 
     <string-array name="tile_types_values">
         <item>app</item>
+        <item>path</item>
         <item>macro</item>
-        <item>command</item>
+        <item>shell</item>
     </string-array>
 </resources>

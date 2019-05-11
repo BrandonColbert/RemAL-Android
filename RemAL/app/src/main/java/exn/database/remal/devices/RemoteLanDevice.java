@@ -48,8 +48,9 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
     /**
      * Searches for devices on the network with the port for RemAL
      * @param callback Function to be called with the list of devices
+     * @param timeout Amount of time to sped searching in milliseconds
      */
-    public void findDevices(LanDeviceCallback callback) {
+    public void findDevices(LanDeviceCallback callback, int timeout) {
         final int port = getPort();
         isSearching = true;
 
@@ -72,20 +73,21 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
                     for(InterfaceAddress addressInterface : netint.getInterfaceAddresses()) {
                         InetAddress address = addressInterface.getAddress();
 
-                        if(address != null) {
-                            try {
+                        try {
+                            if(address != null)
                                 socket.send(new DatagramPacket(DETECT_BYTES, DETECT_BYTES.length, address, port));
-                            } catch(Exception e) {
-                                e.printStackTrace();
-                            }
+                        } catch(Exception e) {
+                            e.printStackTrace();
                         }
                     }
                 }
             }
 
-            Thread findThread = new Thread(() -> {
+            //Start trying to find
+            new Thread(() -> {
                 List<LanDeviceDiscoveryPack> devices = new ArrayList<>();
 
+                //Keep searching for more devices
                 while(isSearching) {
                     byte[] buffer = new byte[DETECT_BYTES.length];
                     DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -93,26 +95,22 @@ public class RemoteLanDevice extends RemoteWiFiDevice {
                     try {
                         socket.receive(packet);
 
+                        //Add if the message received is also detect string as it proves its a RemAL device
                         if(new String(buffer).equals(DETECT_STRING))
                             devices.add(new LanDeviceDiscoveryPack(packet, buffer));
-                    } catch(SocketException e) {
-
-                    } catch(IOException e) {
-                        e.printStackTrace();
-                    }
+                    } catch(IOException e) {}
                 }
 
                 callback.run(devices.toArray(new LanDeviceDiscoveryPack[0]));
-            });
+            }).start();
 
-            findThread.start();
-
+            //Schedule the timeout
             new Timer().schedule(new TimerTask() {
                 public void run() {
                     isSearching = false;
                     socket.close();
                 }
-            }, 1000);
+            }, timeout);
         } catch(Exception e) {
             isSearching = false;
             e.printStackTrace();

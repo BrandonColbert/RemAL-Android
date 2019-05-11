@@ -11,7 +11,7 @@
     <EditTextPreference
         android:key="appearance_columns"
         android:title="Columns"
-        android:dialogLayout="@layout/layout_edit_text_number"/>
+        android:dialogLayout="@layout/layout_edit_text_number_columns"/>
 
     <EditTextPreference
         android:key="color_deck_background"

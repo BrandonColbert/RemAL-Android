@@ -42,7 +42,7 @@ public class DeckTile extends RemoteRequest implements ITile {
 
     public void setPosition(int index) {
         this.index = index;
-        RemAL.post(new TileChangedEvent(this));
+		RemAL.post(new TileChangedEvent(this));
     }
 
     public int getPosition() {
@@ -92,6 +92,7 @@ public class DeckTile extends RemoteRequest implements ITile {
     public void writeToParcel(Parcel parcel, int i) {
         parcel.writeString(getTargetDevice() == null ? "" : getTargetDevice().getName());
         parcel.writeString(getRequest());
+        parcel.writeString(getRequestType());
         parcel.writeInt(index);
         parcel.writeString(name);
     }
@@ -103,13 +104,8 @@ public class DeckTile extends RemoteRequest implements ITile {
             target = RemAL.getDevice(deviceName);
 
         request = parcel.readString();
+        type = parcel.readString();
         index = parcel.readInt();
         name = parcel.readString();
-    }
-
-    //TODO: Remove
-    @Override
-    public String getRequest() {
-        return name;
     }
 }

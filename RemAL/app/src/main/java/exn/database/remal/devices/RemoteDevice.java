@@ -4,13 +4,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import exn.database.remal.core.RemAL;
-import exn.database.remal.deck.ActionValidCallback;
-import exn.database.remal.events.DeviceDisconnectEvent;
+import exn.database.remal.deck.DeviceActionCallback;
 
 public abstract class RemoteDevice implements IRemoteDevice {
     protected String name;
     protected int order;
-    protected volatile boolean isConnecting;
 
     /**
      * Creates a device with the specified name
@@ -18,13 +16,10 @@ public abstract class RemoteDevice implements IRemoteDevice {
      */
     public RemoteDevice(String name) {
         this.name = name;
-        isConnecting = false;
         order = RemAL.getDevices().length;
     }
 
-    public RemoteDevice() {
-        isConnecting = false;
-    }
+    public RemoteDevice() {}
 
     public String getName() {
         return name;
@@ -32,10 +27,6 @@ public abstract class RemoteDevice implements IRemoteDevice {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public boolean isConnecting() {
-        return isConnecting;
     }
 
     public int getOrder() {
@@ -63,5 +54,20 @@ public abstract class RemoteDevice implements IRemoteDevice {
     public void load(JSONObject data) throws JSONException {
         name = data.getString("name");
         order = data.getInt("order");
+    }
+
+    @Override
+    public void connect(DeviceActionCallback callback) {
+        if(!isConnected())
+            if(isConnecting())
+                RemAL.displayText("Already trying '" + getName() + "' through " + getConnectionName() + "...");
+            else
+                RemAL.displayText("Trying '" + getName() + "' through " + getConnectionName() + "...");
+    }
+
+    @Override
+    public void disconnect() {
+        if(isConnected())
+            RemAL.displayText("Disconnected from " + getName());
     }
 }

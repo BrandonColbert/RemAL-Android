@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.widget.Toast;
 
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import exn.database.remal.config.PersistenceUtils;
+import exn.database.remal.deck.TileLevelTracker;
 import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.devices.RemoteMultiDevice;
 import exn.database.remal.events.DeviceCreatedEvent;
@@ -22,16 +22,18 @@ import exn.database.remal.deck.DeckTile;
 import exn.database.remal.deck.ITile;
 import exn.database.remal.events.TileDestroyedEvent;
 
+/**
+ * Multipurpose class used for many interactions between different parts of the program
+ */
 public final class RemAL {
-    /** List of existing devices */
     private static final HashMap<String, IRemoteDevice> devices = new HashMap<>();
     private static final List<IRemalEventListener> listeners = new ArrayList<>();
     private static Activity activity;
 
     private RemAL() {}
 
-    public static void log(Object o) {
-        System.out.println("[RemAL-Log] " + o.toString());
+    public static void log(Object msg) {
+        System.out.println("[RemAL-Log] " + msg.toString());
     }
 
     public static void setMainActivity(Activity activity) {
@@ -59,6 +61,7 @@ public final class RemAL {
      */
     public static ITile createTile(IRemoteDevice device, int index) {
         ITile tile = new DeckTile(device, index);
+        TileLevelTracker.notify(index, true);
         post(new TileCreatedEvent(tile));
 
         return tile;
@@ -70,7 +73,12 @@ public final class RemAL {
      */
     public static ITile getTile(int index) {
         try {
-            return PersistenceUtils.loadTile(index);
+            ITile tile = PersistenceUtils.loadTile(index);
+
+            if(tile != null)
+                TileLevelTracker.notify(index, true);
+
+            return tile;
         } catch(JSONException e) {
             e.printStackTrace();
         }
@@ -143,10 +151,12 @@ public final class RemAL {
     }
 
     public static boolean renameDevice(String oldName, String newName) {
+        //Only allow renaming if the new name isn't an empty string or duplicate
         if(!newName.isEmpty() && !devices.containsKey(newName)) {
             IRemoteDevice device = devices.remove(oldName);
 
             if(device != null) {
+                //Clear save and remove from old path
                 try {
                     PersistenceUtils.removeFromDevicePath(device);
                     PersistenceUtils.removeDeviceSave(device);
@@ -154,9 +164,11 @@ public final class RemAL {
                     e.printStackTrace();
                 }
 
+                //Update name
                 device.setName(newName);
                 devices.put(newName, device);
 
+                //Re-save and add to path under new name
                 try {
                     PersistenceUtils.addToDevicePath(device);
                     PersistenceUtils.saveDevice(device);

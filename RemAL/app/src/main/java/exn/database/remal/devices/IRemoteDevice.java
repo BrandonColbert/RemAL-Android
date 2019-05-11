@@ -1,7 +1,7 @@
 package exn.database.remal.devices;
 
 import exn.database.remal.config.IPersistent;
-import exn.database.remal.deck.ActionValidCallback;
+import exn.database.remal.deck.DeviceActionCallback;
 
 /**
  * A device that can be connected to and sent commands
@@ -36,14 +36,14 @@ public interface IRemoteDevice extends IPersistent {
      * Connects to this device and updates connection status
      * @param callback Callback passing true/false for whether the connection was successful
      */
-    void connect(ActionValidCallback callback);
+    void connect(DeviceActionCallback callback);
 
     /**
      * Sends a request to this device
      * @param request Request to send
      * @param callback Callback passing true if the command was both received and executed successfully, or false otherwise
      */
-    void sendRequest(String request, ActionValidCallback callback);
+    void sendRequest(String request, DeviceActionCallback callback);
 
     /**
      * @return The localized name of this device

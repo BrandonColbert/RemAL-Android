@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import exn.database.remal.core.RemAL;
-import exn.database.remal.deck.ActionValidCallback;
+import exn.database.remal.deck.DeviceActionCallback;
 
 /**
  * Handles connections and command sending to devices
@@ -24,6 +24,7 @@ public class RemoteMultiDevice extends RemoteDevice {
     private HashMap<MultiDeviceMode, SubDevicePack> subdevices = new HashMap<>();
     private HashMap<Class<? extends IRemoteDevice>, MultiDeviceMode> classmap = new HashMap<>();
     private MultiDeviceMode currentMode;
+    private volatile boolean connectionResult, connectionWaiting, isConnecting;
 
     public RemoteMultiDevice(String name) {
         super(name);
@@ -75,6 +76,10 @@ public class RemoteMultiDevice extends RemoteDevice {
         return null;
     }
 
+    public boolean isConnecting() {
+        return isConnecting || (currentMode != MultiDeviceMode.NONE && subdevices.get(currentMode).getDevice().isConnecting());
+    }
+
     public boolean isConnected() {
         return currentMode != MultiDeviceMode.NONE && subdevices.get(currentMode).getDevice().isConnected();
     }
@@ -86,17 +91,14 @@ public class RemoteMultiDevice extends RemoteDevice {
         currentMode = MultiDeviceMode.NONE;
     }
 
-    public void sendRequest(String request, ActionValidCallback callback) {
+    public void sendRequest(String request, DeviceActionCallback callback) {
         if(currentMode != MultiDeviceMode.NONE)
             subdevices.get(currentMode).getDevice().sendRequest(request, callback);
         else
             callback.run(false);
     }
 
-    private volatile boolean connectionResult;
-    private volatile boolean connectionWaiting;
-
-    public void connect(ActionValidCallback callback) {
+    public void connect(DeviceActionCallback callback) {
         isConnecting = true;
 
         List<SubDevicePack> devices = new ArrayList<>();
@@ -114,8 +116,6 @@ public class RemoteMultiDevice extends RemoteDevice {
 
                 if(pack.isEnabled()) {
                     IRemoteDevice device = pack.getDevice();
-
-                    RemAL.displayText("Trying '" + name + "' through " + device.getConnectionName() + "...");
 
                     connectionWaiting = true;
 

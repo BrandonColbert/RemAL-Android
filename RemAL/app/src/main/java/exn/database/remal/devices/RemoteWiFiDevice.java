@@ -8,34 +8,39 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 
+import exn.database.remal.config.PersistentValues;
 import exn.database.remal.core.RemAL;
+import exn.database.remal.deck.ITile;
+import exn.database.remal.deck.TileLevelTracker;
 import exn.database.remal.events.DeviceConfigChangedEvent;
 import exn.database.remal.events.DeviceConnectEvent;
 import exn.database.remal.events.DeviceDisconnectEvent;
-import exn.database.remal.deck.ActionValidCallback;
+import exn.database.remal.deck.DeviceActionCallback;
+import exn.database.remal.events.DeviceTileCreateEvent;
 
 /**
  * Handles device access through LAN connection
  */
 public class RemoteWiFiDevice extends RemoteDevice {
     private static final String HANDSHAKE = "REMAL_HANDSHAKE",
-            ACTION_VALID = "REMAL_ACTION_VALID",
-            ACTION_INVALID = "REMAL_ACTION_INVALID",
-            REMAL_DC = "REMAL_DISCONNECT";
+                                REMAL_DC = "REMAL_DISCONNECT",
+                                TILE_CREATE = "TILE_CREATE";
     private static final int DEFAULT_WIFI_PORT = 24545;
 
     private boolean connected;
+    private volatile boolean isConnecting;
     private Socket socket;
     private BufferedWriter writer;
     private BufferedReader reader;
     private String address;
     private int port;
     private Thread wifiThread;
-    private ActionValidCallback lastActionCallback;
 
     public RemoteWiFiDevice(String name) {
         super(name);
@@ -69,9 +74,17 @@ public class RemoteWiFiDevice extends RemoteDevice {
         return connected;
     }
 
+    public boolean isConnecting() {
+        return isConnecting;
+    }
+
     public void disconnect() {
+        super.disconnect();
+
         if(connected) {
             connected = false;
+
+            //Close the socket and IO
 
             try {
                 writer.close();
@@ -81,6 +94,7 @@ public class RemoteWiFiDevice extends RemoteDevice {
                 e.printStackTrace();
             }
 
+            //Let the WiFi thread know it needs to stop
             if(wifiThread != null)
                 wifiThread.interrupt();
 
@@ -88,99 +102,96 @@ public class RemoteWiFiDevice extends RemoteDevice {
         }
     }
 
-    public void connect(ActionValidCallback callback) {
-        disconnect();
-
-        isConnecting = true;
-
-        if(address.isEmpty()) {
-            isConnecting = false;
-            callback.run(false);
-
-            return;
-        }
-
-        boolean didInit = false;
-
-        //Get wifi io
+    /**
+     * Try to get the socket and IO
+     * @return True if successful, false otherwise
+     */
+    private boolean setupConnection() {
+        //Get socket and io
         try {
-            socket = new Socket(getAddress(), getPort());
+            socket = new Socket();
+            socket.setKeepAlive(true);
+            socket.connect(new InetSocketAddress(getAddress(), getPort()), 5000);
             writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            didInit = true;
+            return true;
+        } catch(SocketTimeoutException e) {
+            return false;
         } catch(Exception e) {
             e.printStackTrace();
         }
 
-        if(didInit) {
-            //Start listener
-            wifiThread = new Thread(() -> {
-                do {
-                    String input = null;
+        return false;
+    }
 
-                    try {
-                        input = reader.readLine();
-                    } catch(SocketException e) {
-                        if(!socket.isConnected())
+    public void connect(DeviceActionCallback callback) {
+        super.connect(callback);
+
+        if(!connected && !isConnecting) {
+            disconnect();
+            isConnecting = true;
+
+            //Ensure address exists to connect to
+            if(!address.isEmpty() && setupConnection()) {
+                //Start listener
+                (wifiThread = new Thread(() -> {
+                    do {
+                        String input = null;
+
+                        //Read input
+                        try {
+                            input = reader.readLine();
+                        } catch(IOException e) {
                             disconnect();
-                    } catch(IOException e) {
-                        e.printStackTrace();
-                    }
-
-                    if(input != null) {
-                        switch(input) {
-                            case HANDSHAKE:
-                                connected = true;
-                                callback.run(true);
-                                RemAL.post(new DeviceConnectEvent(this));
-                                break;
-                            case ACTION_VALID:
-                                if(lastActionCallback != null) {
-                                    lastActionCallback.run(true);
-                                    lastActionCallback = null;
-                                }
-                                break;
-                            case ACTION_INVALID:
-                                if(lastActionCallback != null) {
-                                    lastActionCallback.run(false);
-                                    lastActionCallback = null;
-                                }
-                                break;
-                            case REMAL_DC:
-                                disconnect();
-                                break;
+                            connect(valid -> {});
+                        } catch(Exception e) {
+                            e.printStackTrace();
                         }
-                    }
-                } while(connected && !Thread.currentThread().isInterrupted());
-            });
 
-            wifiThread.start();
+                        //Interpret message if not null or empty
+                        if(input != null && !input.isEmpty())
+                            onMessage(input, callback);
 
-            sendRequest(HANDSHAKE, valid -> {});
-        } else {
+                    } while(connected && !Thread.currentThread().isInterrupted());
+                })).start();
+
+                sendRequest(HANDSHAKE, valid -> {});
+            } else {
+                callback.run(false);
+            }
+
             isConnecting = false;
-            callback.run(false);
         }
     }
 
-    public void sendRequest(String request, ActionValidCallback callback) {
-        if(lastActionCallback != null)
-            lastActionCallback.run(false);
+    public void sendRequest(String request, DeviceActionCallback callback) {
+        //Invalidate last action
+        Thread send = new Thread(() -> {
+            try {
+                //Convert to bytes
+                byte[] data = request.getBytes();
 
-        lastActionCallback = callback;
+                //Send first message to define length and second as actual message
+                socket.getOutputStream().write(ByteBuffer.allocate(4).putInt(data.length).array());
+                writer.write(request);
+                writer.flush();
+            } catch(SocketException e) {
+                disconnect();
+                connect(valid -> {
+                    if(valid)
+                        sendRequest(request, callback);
+                    else
+                        callback.run(false);
+                });
+            } catch(Exception e) {
+                e.printStackTrace();
 
-        RemAL.log("Sending request: " + request);
+                callback.run(false);
+            }
+        });
 
-        try {
-            byte[] data = request.getBytes();
-
-            socket.getOutputStream().write(ByteBuffer.allocate(4).putInt(data.length).array());
-            writer.write(request);
-            writer.flush();
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
+        send.start();
     }
 
 
@@ -210,5 +221,46 @@ public class RemoteWiFiDevice extends RemoteDevice {
 
     public String getConnectionDescription() {
         return getConnectionName() + " | " + address + ":" + port;
+    }
+
+    /**
+     * Called when the a message is received from the device
+     * @param msg The message
+     * @param callback Callback to call after interpreting the message
+     */
+    private void onMessage(String msg, DeviceActionCallback callback) {
+        switch(msg) {
+            case HANDSHAKE:
+                connected = true;
+                callback.run(true);
+                RemAL.post(new DeviceConnectEvent(this));
+                break;
+            case REMAL_DC:
+                disconnect();
+                break;
+            default: {
+                if(msg.startsWith(TILE_CREATE)) {
+                    String path = msg.substring(TILE_CREATE.length() + 1);
+                    int extensionEnd = path.lastIndexOf('.'), count = PersistentValues.getMaxTiles();
+                    String name = path.substring(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1, extensionEnd != -1 ? extensionEnd : path.length());
+
+                    for(int i = 0; i < count; i++) {
+                        if(!TileLevelTracker.tileAt(i)) {
+                            ITile tile = RemAL.createTile(null, i);
+                            tile.setName(name);
+                            tile.setRequestType("path");
+                            tile.setRequest(path);
+                            tile.setTargetDevice(this);
+                            RemAL.saveTile(tile);
+                            RemAL.post(new DeviceTileCreateEvent(this, tile));
+                            
+                            break;
+                        }
+                    }
+                }
+
+                break;
+            }
+        }
     }
 }

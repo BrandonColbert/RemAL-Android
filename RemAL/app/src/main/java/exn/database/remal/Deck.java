@@ -2,6 +2,7 @@ package exn.database.remal;
 
 import android.content.ClipData;
 import android.content.ClipDescription;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -24,20 +25,26 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 
 import exn.database.remal.config.PersistenceUtils;
+import exn.database.remal.config.PersistentValues;
 import exn.database.remal.core.IRemalEventListener;
 import exn.database.remal.core.RemAL;
 import exn.database.remal.core.RemalEvent;
 import exn.database.remal.deck.ITile;
+import exn.database.remal.deck.TileLevelTracker;
 import exn.database.remal.devices.IRemoteDevice;
 import exn.database.remal.events.ColumnAmountChangedEvent;
 import exn.database.remal.events.DeckColorChangedEvent;
+import exn.database.remal.events.DeviceTileCreateEvent;
+import exn.database.remal.events.MaxTilesChangedEvent;
 import exn.database.remal.events.TileChangedEvent;
 import exn.database.remal.events.TileDestroyedEvent;
 import exn.database.remal.ui.SquareView;
 import exn.database.remal.ui.TileButton;
 
+/**
+ * The deck is where interactions with {@link exn.database.remal.deck.DeckTile tiles} occurs
+ */
 public class Deck extends AppCompatActivity implements IRemalEventListener {
-    public static final int DEFAULT_COLUMNS = 3, MAX_TILES = 111;
     private TableLayout appTable;
     private View hoverView;
     private boolean isEditing, isFullscreen;
@@ -47,20 +54,16 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_deck);
+        appTable = findViewById(R.id.app_table);
 
-        PersistenceUtils.loadPreferences(this);
         RemAL.setMainActivity(this);
+		RemAL.register(this);
+
+		PersistenceUtils.setPreferences(getSharedPreferences("exn.database.remal", Context.MODE_PRIVATE));
         RemAL.loadDevices();
         RemAL.connectAllDevices();
+        TileLevelTracker.rebuild();
 
-        //TODO: Remove
-        //PersistenceUtils.getPreferences().edit().clear().apply();
-        /*
-        for(Map.Entry<String, ?> e : PersistenceUtils.getPreferences().getAll().entrySet())
-            RemAL.log(e.getKey() + ": " + e.getValue());
-        */
-
-        appTable = findViewById(R.id.app_table);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -71,11 +74,10 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                 toggleFullscreen(true);
         });
 
-        updateView(Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS))));
+        updateView();
         updateDeckColors();
         toggleEditMode(false);
 
-        RemAL.register(this);
         setupDragScroll();
     }
 
@@ -122,11 +124,11 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
     @Override
     public void onRemalEvent(RemalEvent event) {
-        if(event instanceof ColumnAmountChangedEvent) {
-            updateView(((ColumnAmountChangedEvent)event).columns);
+        if(event instanceof ColumnAmountChangedEvent || event instanceof MaxTilesChangedEvent || event instanceof DeviceTileCreateEvent) {
+            runOnUiThread(this::updateView);
         } else if(event instanceof TileDestroyedEvent) {
             int index = ((TileDestroyedEvent)event).tile.getPosition();
-            int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
+            int columns = PersistentValues.getColumns();
             int column = index % columns;
 
             TableRow tableRow = (TableRow)appTable.getChildAt(index / columns);
@@ -297,11 +299,10 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
     }
 
     /**
-     * Updates the view based on the number of columns
-     * @param columns Number of columns in the app table
+     * Updates the view
      */
-    private void updateView(int columns) {
-        final int rows = (int)Math.ceil((double)MAX_TILES / (double)columns);
+    private void updateView() {
+        final int maxTiles = PersistentValues.getMaxTiles(), columns = PersistentValues.getColumns(), rows = (int)Math.ceil((double)maxTiles / (double)columns);
 
         int atCount;
         while((atCount = appTable.getChildCount()) > rows)
@@ -327,7 +328,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             for(int j = 0; j < columns; j++) {
                 int index = i * columns + j;
 
-                if(index >= MAX_TILES)
+                if(index >= maxTiles)
                     break loop;
 
                 View view = rowView.getChildAt(j);
@@ -410,7 +411,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             switch(e.getAction()) {
                 case DragEvent.ACTION_DROP:
                     int index = Integer.valueOf(e.getClipData().getItemAt(0).getText().toString());
-                    int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
+                    int columns = PersistentValues.getColumns();
                     int staticIndex = appTable.indexOfChild((TableRow)v.getParent()) * columns + ((TableRow)v.getParent()).indexOfChild(v);
 
                     ITile movedTile = RemAL.getTile(index);
@@ -461,7 +462,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
         view.setLayoutParams(params);
 
         view.setOnClickListener(v -> {
-            int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
+            int columns = PersistentValues.getColumns();
 
             TableRow rowView = (TableRow)v.getParent();
             int relativeIndex = rowView.indexOfChild(v);
@@ -474,6 +475,8 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             rowView.removeViewAt(relativeIndex);
             rowView.addView(createTileButton(tile), relativeIndex);
 
+            TileLevelTracker.notify(index, true);
+
             Intent intent = new Intent(this, TileOptions.class);
             intent.putExtra(TileOptions.TO_EXTRA, tile);
 
@@ -484,7 +487,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             switch(e.getAction()) {
                 case DragEvent.ACTION_DROP:
                     int index = Integer.valueOf(e.getClipData().getItemAt(0).getText().toString());
-                    int columns = Integer.valueOf(PersistenceUtils.loadValue("appearance_columns", String.valueOf(DEFAULT_COLUMNS)));
+                    int columns = PersistentValues.getColumns();
 
                     TableRow originalRow = (TableRow)appTable.getChildAt(index / columns);
                     if(originalRow != null) {
@@ -507,6 +510,8 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
                         rowView.removeViewAt(relativeIndex);
                         rowView.addView(createTileButton(movedTile), relativeIndex);
+
+                        TileLevelTracker.notify(index, newIndex);
                     }
 
                     setHoverView(null);
@@ -546,9 +551,9 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
      * Resets the colors of the deck to their original
      */
     private void resetDeckColors() {
-        PersistenceUtils.saveValue("color_deck_background", RemAL.convertColorToCode(getResources().getColor(R.color.colorPrimaryDark)));
-        PersistenceUtils.saveValue("color_deck_tile", RemAL.convertColorToCode(getResources().getColor(R.color.colorAccent)));
-        PersistenceUtils.saveValue("color_deck_text", RemAL.convertColorToCode(getResources().getColor(R.color.colorAltText)));
+        PersistentValues.resetDeckBackgroundColor(this);
+        PersistentValues.resetDeckTileColor(this);
+        PersistentValues.resetDeckTextColor(this);
 
         updateDeckColors();
     }
@@ -557,10 +562,10 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
      * Updates the colors currently viewed on the deck
      */
     private void updateDeckColors() {
-        findViewById(R.id.deckScroll).setBackgroundColor(Color.parseColor(PersistenceUtils.loadValue("color_deck_background", RemAL.convertColorToCode(getResources().getColor(R.color.colorPrimaryDark)))));
+        findViewById(R.id.deckScroll).setBackgroundColor(Color.parseColor(PersistentValues.getDeckBackgroundColor(this)));
 
-        textColor = Color.parseColor(PersistenceUtils.loadValue("color_deck_text", RemAL.convertColorToCode(getResources().getColor(R.color.colorAltText))));
-        tileColor = Color.parseColor(PersistenceUtils.loadValue("color_deck_tile", RemAL.convertColorToCode(getResources().getColor(R.color.colorAccent))));
+        textColor = Color.parseColor(PersistentValues.getDeckTextColor(this));
+        tileColor = Color.parseColor(PersistentValues.getDeckTileColor(this));
 
         final int colorDelta = 50, r = Color.red(tileColor), g = Color.green(tileColor), b = Color.blue(tileColor);
 
