@@ -253,7 +253,7 @@ public class RemoteWiFiDevice extends RemoteDevice {
                             tile.setTargetDevice(this);
                             RemAL.saveTile(tile);
                             RemAL.post(new DeviceTileCreateEvent(this, tile));
-                            
+
                             break;
                         }
                     }
