@@ -3,6 +3,9 @@ package exn.database.remal.ui;
 import android.content.Context;
 import android.support.v7.widget.AppCompatButton;
 import android.util.AttributeSet;
+import android.view.ViewGroup;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 
 import exn.database.remal.core.IRemalEventListener;
 import exn.database.remal.core.RemAL;
@@ -10,7 +13,10 @@ import exn.database.remal.core.RemalEvent;
 import exn.database.remal.deck.ITile;
 import exn.database.remal.events.TileChangedEvent;
 
-public class TileButton extends AppCompatButton implements IRemalEventListener {
+/**
+ * A button with the same width/height based on which value is greater that also stores a tile
+ */
+public class TileButton extends AppCompatButton {
     private ITile tile;
 
     public TileButton(Context context) {
@@ -35,18 +41,6 @@ public class TileButton extends AppCompatButton implements IRemalEventListener {
     }
 
     @Override
-    public void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        RemAL.register(this);
-    }
-
-    @Override
-    public void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-        RemAL.unregister(this);
-    }
-
-    @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
@@ -54,16 +48,7 @@ public class TileButton extends AppCompatButton implements IRemalEventListener {
         int height = MeasureSpec.getSize(heightMeasureSpec);
         int side = width > height ? width : height;
 
+        //Set both dimensions to same value
         setMeasuredDimension(side, side);
-    }
-
-    @Override
-    public void onRemalEvent(RemalEvent event) {
-        if(event instanceof TileChangedEvent) {
-            TileChangedEvent e = (TileChangedEvent)event;
-
-            if(e.tile.getPosition() == tile.getPosition())
-                setTile(e.tile);
-        }
     }
 }

@@ -32,6 +32,7 @@ import exn.database.remal.core.RemalEvent;
 import exn.database.remal.deck.ITile;
 import exn.database.remal.deck.TileLevelTracker;
 import exn.database.remal.devices.IRemoteDevice;
+import exn.database.remal.devices.RemoteWiFiDevice;
 import exn.database.remal.events.ColumnAmountChangedEvent;
 import exn.database.remal.events.DeckColorChangedEvent;
 import exn.database.remal.events.DeviceTileCreateEvent;
@@ -56,34 +57,36 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
         setContentView(R.layout.activity_deck);
         appTable = findViewById(R.id.app_table);
 
+        //Setup RemAl
         RemAL.setMainActivity(this);
 		RemAL.register(this);
 
+		//Load preferences, devices, and tiles
 		PersistenceUtils.setPreferences(getSharedPreferences("exn.database.remal", Context.MODE_PRIVATE));
         RemAL.loadDevices();
         RemAL.connectAllDevices();
         TileLevelTracker.rebuild();
 
+        //Set the toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        toggleFullscreen(RemAL.getDevices().length != 0);
-
+        //Clicking on the view sets to fullscreen
         appTable.setOnClickListener(view -> {
             if(isFullscreen)
                 toggleFullscreen(true);
         });
 
+        //Update the view, colors, and default editing to off
         updateView();
         updateDeckColors();
         toggleEditMode(false);
 
+        //Allow dragging near the top and bottom during edit mode to scroll
         setupDragScroll();
-    }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
+        //Set to fullscreen if at least one tile exists
+        toggleFullscreen(TileLevelTracker.getTileCount() != 0);
     }
 
     @Override
@@ -96,6 +99,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event)  {
+        //Make the back button on the deck toggle fullscreen
         if(keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
             toggleFullscreen(!isFullscreen);
 
@@ -139,6 +143,15 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                 resetDeckColors();
             else
                 updateDeckColors();
+        } else if(event instanceof TileChangedEvent) {
+            TileChangedEvent e = (TileChangedEvent)event;
+            int index = e.tile.getPosition();
+            int columns = PersistentValues.getColumns();
+
+            View v = ((TableRow)appTable.getChildAt(index / columns)).getChildAt(index % columns);
+
+            if(v instanceof TileButton)
+                ((TileButton)v).setTile(e.tile);
         }
     }
 
@@ -192,6 +205,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                     View sub = appTable.getChildAt(i);
                     sub.getHitRect(bounds);
 
+                    //Determine if the event occurred in the bounds of the TableRow
                     if(bounds.contains(Math.round(e.getX() + deckScroll.getScrollX()), Math.round(e.getY() + deckScroll.getScrollY()))) {
                         sub.dispatchDragEvent(e);
                         break;
@@ -241,7 +255,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
     /**
      * Toggles fullscreen mode
-     * @param value Whether to be fullscreen
+     * @param value Whether to be fullscreen (toggles edit mode off if true)
      */
     private void toggleFullscreen(boolean value) {
         isFullscreen = value;
@@ -276,6 +290,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             TableRow row = (TableRow)appTable.getChildAt(i);
             int count = row.getChildCount();
 
+            //Find where the first tile is to start making elements of the TableRows visible
             if(!anyTilesVisibleYet) {
                 for(int j = 0; j < count; j++) {
                     if(row.getChildAt(j) instanceof TileButton) {
@@ -289,8 +304,10 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                 View v = row.getChildAt(j);
 
                 if(v instanceof SquareView) {
+                    //Set gone if there hasn't been a tile yet so it doesn't take up unnecessary room outside of edit mode
                     v.setVisibility(value ? View.VISIBLE : (anyTilesVisibleYet ? View.INVISIBLE : View.GONE));
                 } else if(v instanceof TileButton) {
+                    //Set the color to editing or normal based on editing status
                     v.getBackground().mutate().setColorFilter(value ? tileEditColor : tileColor, PorterDuff.Mode.SRC_IN);
 					v.invalidate();
                 }
@@ -304,6 +321,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
     private void updateView() {
         final int maxTiles = PersistentValues.getMaxTiles(), columns = PersistentValues.getColumns(), rows = (int)Math.ceil((double)maxTiles / (double)columns);
 
+        //Make sure there are not more rows than possible
         int atCount;
         while((atCount = appTable.getChildCount()) > rows)
             appTable.removeViewAt(atCount - 1);
@@ -322,6 +340,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                 appTable.addView(rowView);
             }
 
+            //Make sure the elements have the same size
             rowView.setWeightSum(columns);
 
             //Reposition tiles based on index
@@ -351,11 +370,13 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
                 }
             }
 
+            //Make sure there are not more columns in a row than possible
             int count;
             while((count = rowView.getChildCount()) > columns)
                 rowView.removeViewAt(count - 1);
         }
 
+        //Make sure there are not more rows than possible
         int count;
         while((count = appTable.getChildCount()) > rows)
             appTable.removeViewAt(count - 1);
@@ -391,21 +412,21 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
             }
         });
 
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            button.setOnLongClickListener(v -> {
-                if(isEditing) {
-                    String posString = String.valueOf(tile.getPosition());
+        button.setOnLongClickListener(v -> {
+            if(isEditing) {
+                String posString = String.valueOf(button.getTile().getPosition());
 
-                    v.startDragAndDrop(
-                        new ClipData(posString, new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, new ClipData.Item(posString)),
-                        new View.DragShadowBuilder(v),
-                        v, 0
-                    );
-                }
+                ClipData data = new ClipData(posString, new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, new ClipData.Item(posString));
+                View.DragShadowBuilder shadow = new View.DragShadowBuilder(v);
 
-                return true;
-            });
-        }
+                if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
+                    v.startDrag(data, shadow, v, 0);
+                else
+                    v.startDragAndDrop(data, shadow, v, 0);
+            }
+
+            return true;
+        });
 
         button.setOnDragListener((v, e) -> {
             switch(e.getAction()) {

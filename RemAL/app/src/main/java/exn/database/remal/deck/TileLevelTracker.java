@@ -26,6 +26,13 @@ public class TileLevelTracker {
 	}
 
 	/**
+	 * @return The number of tiles
+	 */
+	public static int getTileCount() {
+		return tileIndices.size();
+	}
+
+	/**
 	 * Notifies whether a tile currently exists at this position
 	 * @param index Position of the tile
 	 * @param exists Whether the tile exists

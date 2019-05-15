@@ -145,6 +145,7 @@ public class RemoteWiFiDevice extends RemoteDevice {
                         } catch(IOException e) {
                             disconnect();
                             connect(valid -> {});
+                            break;
                         } catch(Exception e) {
                             e.printStackTrace();
                         }
@@ -153,7 +154,7 @@ public class RemoteWiFiDevice extends RemoteDevice {
                         if(input != null && !input.isEmpty())
                             onMessage(input, callback);
 
-                    } while(connected && !Thread.currentThread().isInterrupted());
+                    } while(connected && !Thread.currentThread().isInterrupted()); //do-while so that the HANDSHAKE response can be received to determine whether connected
                 })).start();
 
                 sendRequest(HANDSHAKE, valid -> {});

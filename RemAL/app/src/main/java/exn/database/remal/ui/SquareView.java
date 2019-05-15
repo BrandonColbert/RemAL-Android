@@ -4,6 +4,9 @@ import android.content.Context;
 import android.util.AttributeSet;
 import android.view.View;
 
+/**
+ * A view with the same width/height based on which is the greater value
+ */
 public class SquareView extends View {
     public SquareView(Context context) {
         super(context);
@@ -25,6 +28,7 @@ public class SquareView extends View {
         int height = MeasureSpec.getSize(heightMeasureSpec);
         int side = width > height ? width : height;
 
+        //Set both dimensions to same value
         setMeasuredDimension(side, side);
     }
 }
