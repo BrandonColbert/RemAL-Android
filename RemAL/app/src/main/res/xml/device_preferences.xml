@@ -50,7 +50,7 @@
 
     <Preference
         android:key="bt_name"
-        android:title="Connected Device"/>
+        android:title="Device"/>
 
     <ListPreference
         android:key="bt_device_list"
@@ -73,7 +73,7 @@
         android:key="wifi_address"
         android:title="IP Address"
         android:dialogLayout="@layout/layout_edit_text_address"/>
-
+<!--
     <PreferenceCategory
         android:key="category_ssh"
         android:title="SSH Settings"/>
@@ -95,7 +95,7 @@
     <EditTextPreference
         android:key="ssh_address"
         android:title="Address"/>
-
+-->
     <PreferenceCategory
         android:key="category_other"
         android:title="Other Settings"/>

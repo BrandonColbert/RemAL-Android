@@ -129,7 +129,6 @@ public class RemoteWiFiDevice extends RemoteDevice {
         super.connect(callback);
 
         if(!connected && !isConnecting) {
-            disconnect();
             isConnecting = true;
 
             //Ensure address exists to connect to
@@ -167,8 +166,7 @@ public class RemoteWiFiDevice extends RemoteDevice {
     }
 
     public void sendRequest(String request, DeviceActionCallback callback) {
-        //Invalidate last action
-        Thread send = new Thread(() -> {
+        new Thread(() -> {
             try {
                 //Convert to bytes
                 byte[] data = request.getBytes();
@@ -190,25 +188,36 @@ public class RemoteWiFiDevice extends RemoteDevice {
 
                 callback.run(false);
             }
-        });
-
-        send.start();
+        }).start();
     }
 
-
+    /**
+     * @return Port for the connection
+     */
     public int getPort() {
         return port;
     }
 
+    /**
+     * Sets the port for the connection
+     * @param port Port
+     */
     public void setPort(int port) {
         this.port = port;
         RemAL.post(new DeviceConfigChangedEvent(this));
     }
 
+    /**
+     * @return Address to connect to
+     */
     public String getAddress() {
         return address;
     }
 
+    /**
+     * Sets the address to connect to
+     * @param address Address
+     */
     public void setAddress(String address) {
         if(!address.isEmpty()) {
             this.address = address;
@@ -220,6 +229,7 @@ public class RemoteWiFiDevice extends RemoteDevice {
         return "WiFi";
     }
 
+    @Override
     public String getConnectionDescription() {
         return getConnectionName() + " | " + address + ":" + port;
     }
@@ -254,7 +264,6 @@ public class RemoteWiFiDevice extends RemoteDevice {
                             tile.setTargetDevice(this);
                             RemAL.saveTile(tile);
                             RemAL.post(new DeviceTileCreateEvent(this, tile));
-
                             break;
                         }
                     }

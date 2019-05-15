@@ -1,5 +1,6 @@
 package exn.database.remal;
 
+import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v14.preference.SwitchPreference;
@@ -14,6 +15,7 @@ import java.util.HashMap;
 
 import exn.database.remal.core.RemAL;
 import exn.database.remal.devices.MultiDeviceMode;
+import exn.database.remal.devices.RemoteBluetoothDevice;
 import exn.database.remal.devices.RemoteLanDevice;
 import exn.database.remal.devices.RemoteMultiDevice;
 import exn.database.remal.devices.RemoteWiFiDevice;
@@ -121,6 +123,11 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
             case "bt_enabled":
                 ((SwitchPreference)pref).setChecked(device.getPack(MultiDeviceMode.BLUETOOTH).isEnabled());
                 break;
+            case "bt_name": {
+                String name = device.getSubDevice(RemoteBluetoothDevice.class).getBluetoothName();
+                findPreference("bt_name").setSummary(name.isEmpty() ? "None selected" : name);
+                break;
+            }
             case "wifi_enabled":
                 ((SwitchPreference)pref).setChecked(device.getPack(MultiDeviceMode.WIFI).isEnabled());
                 break;
@@ -138,8 +145,6 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
     public boolean onPreferenceChange(Preference pref, Object newValue) {
         try {
-            //TODO: Make sure everything is saved
-
             switch(pref.getKey()) {
                 case "device_name":
                     if(RemAL.renameDevice(pref.getSummary().toString(), newValue.toString()))
@@ -193,6 +198,15 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 					RemAL.saveDevice(device);
 
                     pref.setSummary(d.getAddress());
+                    break;
+                }
+                case "bt_device_list": {
+                    RemoteBluetoothDevice d = device.getSubDevice(RemoteBluetoothDevice.class);
+                    d.setAddress(newValue.toString());
+                    RemAL.saveDevice(device);
+
+                    String name = d.getBluetoothName();
+                    findPreference("bt_name").setSummary(name.isEmpty() ? "None selected" : name);
                     break;
                 }
             }
@@ -259,13 +273,22 @@ public class DeviceOptionsFragment extends PreferenceFragmentCompat implements P
 
                 break;
             }
+            case "bt_device_list": {
+                ListPreference p = (ListPreference)pref;
+                SubDevicePack pack = device.getPack(MultiDeviceMode.BLUETOOTH);
+
+                String[][] entryArr = ((RemoteBluetoothDevice)pack.getDevice()).findBluetoothDevices();
+
+                p.setEntries(entryArr[0]);
+                p.setEntryValues(entryArr[1]);
+                break;
+            }
             case "wifi_enabled": {
                 SubDevicePack pack = device.getPack(MultiDeviceMode.WIFI);
                 pack.setEnabled(!pack.isEnabled());
                 RemAL.saveDevice(device);
 
                 ((SwitchPreference)pref).setChecked(pack.isEnabled());
-
                 break;
             }
             case "wifi_port":

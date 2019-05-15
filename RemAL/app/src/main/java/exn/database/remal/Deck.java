@@ -396,6 +396,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
         TableRow.LayoutParams params = new TableRow.LayoutParams(0, 0, 1f);
         params.setMargins(5, 5, 5, 5);
+        params.gravity = Gravity.CENTER;
         button.setLayoutParams(params);
 
         button.setOnClickListener(v -> {
@@ -480,6 +481,7 @@ public class Deck extends AppCompatActivity implements IRemalEventListener {
 
         TableRow.LayoutParams params = new TableRow.LayoutParams(0, 0, 1f);
         params.setMargins(5, 5, 5, 5);
+        params.gravity = Gravity.CENTER;
         view.setLayoutParams(params);
 
         view.setOnClickListener(v -> {
